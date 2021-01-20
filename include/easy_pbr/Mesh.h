@@ -214,6 +214,9 @@ public:
     void set_normals_tex(const cv::Mat& mat, const int subsample=1);
     bool is_any_texture_dirty();
 
+    Eigen::Affine3d get_cur_pose();
+    Eigen::Affine3d get_model_matrix();
+
 
     friend std::ostream &operator<<(std::ostream&, const Mesh& m);
 

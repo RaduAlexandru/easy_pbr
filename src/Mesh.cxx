@@ -2100,6 +2100,14 @@ bool Mesh::is_any_texture_dirty(){
 
 }
 
+Eigen::Affine3d Mesh::get_cur_pose() {
+    return m_cur_pose;
+}
+
+Eigen::Affine3d Mesh::get_model_matrix() {
+    return m_model_matrix;
+}
+
 
 
 
