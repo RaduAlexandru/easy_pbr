@@ -738,81 +738,79 @@ void Gui::draw_main_menu(){
 
     }
 
-    ImGui::Separator();
-    if ( ImGui::CollapsingHeader("Selection") )
-    {
-        ImGui::Checkbox("Show Selection", &m_selection_should_draw);
-        ImGui::Checkbox("Edit Selection", &m_selection_edit );
-        m_selected_selection_idx = m_selected_selection_idx % 2;
-        if (ImGui::RadioButton("LeftLowerCorner", m_selected_selection_idx == 0)) { m_selected_selection_idx == 0; } ImGui::SameLine();
-        if (ImGui::RadioButton("RightUpperCorner", m_selected_selection_idx == 1)) { m_selected_selection_idx == 1; }
-        if ( m_selection_should_draw )
-        {
-            if ( m_selection_points.empty() )
-            {
-                // add points on the current camera view.
-                const auto& width = m_view->m_viewport_size.x();//io.DisplaySize.x;
-                const auto& height = m_view->m_viewport_size.y();//io.DisplaySize.y;
-                m_selection_points.emplace_back(Eigen::Vector2d(width/4,height/4));
-                m_selection_points.emplace_back(Eigen::Vector2d(3*width/4,3*height/4));
-            }
-
-
-            Eigen::Matrix4f view=m_view->m_camera->view_matrix();
-            Eigen::Matrix4f proj=m_view->m_camera->proj_matrix(m_view->m_viewport_size);
-            MeshSharedPtr selection = Mesh::create();
-            selection->V.resize(4,3);
-            selection->V.row(0) = m_view->m_camera->unproject( Eigen::Vector3f(m_selection_points[0].x(), m_selection_points[0].y(),m_view->m_camera->m_near * 1.1), view, proj, m_view->m_viewport_size).cast<double>().transpose();
-            selection->V.row(1) = m_view->m_camera->unproject( Eigen::Vector3f(m_selection_points[0].x(), m_selection_points[1].y(),m_view->m_camera->m_near * 1.1), view, proj, m_view->m_viewport_size).cast<double>().transpose();
-            selection->V.row(2) = m_view->m_camera->unproject( Eigen::Vector3f(m_selection_points[1].x(), m_selection_points[1].y(),m_view->m_camera->m_near * 1.1), view, proj, m_view->m_viewport_size).cast<double>().transpose();
-            selection->V.row(3) = m_view->m_camera->unproject( Eigen::Vector3f(m_selection_points[1].x(), m_selection_points[0].y(),m_view->m_camera->m_near * 1.1), view, proj, m_view->m_viewport_size).cast<double>().transpose();
-            selection->E.resize(4,2);
-            selection->E.row(0) << 0,1;
-            selection->E.row(1) << 1,2;
-            selection->E.row(2) << 2,3;
-            selection->E.row(3) << 3,0;
-            selection->C.resize(4,3);
-            selection->C.setConstant(0);
-            selection->C.col(0).setConstant(1);
-            selection->m_vis.m_show_points=true;
-            selection->m_vis.m_show_lines=true;
-            selection->m_vis.m_color_type=MeshColorType::PerVertColor;
-            Scene::show(selection,"selection");
-            static size_t total_points = 0;
-            static size_t selected_points = 0;
-            if ( ImGui::Button("Count") )
-            {
-                total_points = 0;
-                selected_points = 0;
-                MeshSharedPtr selected_mesh = Scene::nr_meshes() > m_selected_mesh_idx ? m_view->m_scene->get_mesh_with_idx(m_selected_mesh_idx) : nullptr;
-                if ( selected_mesh )
-                {
-                    total_points = selected_mesh->V.rows();
-                    for ( int i = 0; i < selected_mesh->V.rows(); ++i)
-                    {
-                        const Eigen::Vector2f px = m_view->m_camera->project( selected_mesh->V.row(i).cast<float>().transpose(), view, proj, m_view->m_viewport_size).hnormalized();
-                        if ( px.x() >= m_selection_points[0].x()
-                             && px.x() <= m_selection_points[1].x()
-                             && px.y() >= m_selection_points[0].y()
-                             && px.y() <= m_selection_points[1].y()
-                             )
-                        {
-                            ++selected_points;
-                        }
-                    }
-                }
-            }
-            size_t unselected_points = total_points - selected_points;
-            ImGui::Text(("Nr of selected points: " + format_with_commas(selected_points)).data());
-            ImGui::Text(("Nr of unselected points: " + format_with_commas(unselected_points)).data());
-            ImGui::Text(("Nr of total points: " + format_with_commas(total_points)).data());
-            //VLOG(1) << "V=[" << selection->V.row(0) << " ; " << selection->V.row(1) << " ; " << selection->V.row(2) << " ; " << selection->V.row(3)<<"];";
-        }
-        if ( m_selection_edit )
-        {
-            edit_selection(m_selected_selection_idx);
-        }
-    }
+//    ImGui::Separator();
+//    if ( ImGui::CollapsingHeader("Selection") )
+//    {
+//        ImGui::Checkbox("Show Selection", &m_selection_should_draw);
+//        ImGui::Checkbox("Edit Selection", &m_selection_edit );
+//        m_selected_selection_idx = m_selected_selection_idx % 2;
+//        if (ImGui::RadioButton("LeftLowerCorner", m_selected_selection_idx == 0)) { m_selected_selection_idx == 0; } ImGui::SameLine();
+//        if (ImGui::RadioButton("RightUpperCorner", m_selected_selection_idx == 1)) { m_selected_selection_idx == 1; }
+//        if ( m_selection_should_draw )
+//        {
+//            if ( m_selection_points.empty() )
+//            {
+//                // add points on the current camera view.
+//                const auto& width = m_view->m_viewport_size.x();//io.DisplaySize.x;
+//                const auto& height = m_view->m_viewport_size.y();//io.DisplaySize.y;
+//                m_selection_points.emplace_back(Eigen::Vector2d(width/4,height/4));
+//                m_selection_points.emplace_back(Eigen::Vector2d(3*width/4,3*height/4));
+//            }
+//            Eigen::Matrix4f view=m_view->m_camera->view_matrix();
+//            Eigen::Matrix4f proj=m_view->m_camera->proj_matrix(m_view->m_viewport_size);
+//            MeshSharedPtr selection = Mesh::create();
+//            selection->V.resize(4,3);
+//            selection->V.row(0) = m_view->m_camera->unproject( Eigen::Vector3f(m_selection_points[0].x(), m_selection_points[0].y(),m_view->m_camera->m_near * 1.1), view, proj, m_view->m_viewport_size).cast<double>().transpose();
+//            selection->V.row(1) = m_view->m_camera->unproject( Eigen::Vector3f(m_selection_points[0].x(), m_selection_points[1].y(),m_view->m_camera->m_near * 1.1), view, proj, m_view->m_viewport_size).cast<double>().transpose();
+//            selection->V.row(2) = m_view->m_camera->unproject( Eigen::Vector3f(m_selection_points[1].x(), m_selection_points[1].y(),m_view->m_camera->m_near * 1.1), view, proj, m_view->m_viewport_size).cast<double>().transpose();
+//            selection->V.row(3) = m_view->m_camera->unproject( Eigen::Vector3f(m_selection_points[1].x(), m_selection_points[0].y(),m_view->m_camera->m_near * 1.1), view, proj, m_view->m_viewport_size).cast<double>().transpose();
+//            selection->E.resize(4,2);
+//            selection->E.row(0) << 0,1;
+//            selection->E.row(1) << 1,2;
+//            selection->E.row(2) << 2,3;
+//            selection->E.row(3) << 3,0;
+//            selection->C.resize(4,3);
+//            selection->C.setConstant(0);
+//            selection->C.col(0).setConstant(1);
+//            selection->m_vis.m_show_points=true;
+//            selection->m_vis.m_show_lines=true;
+//            selection->m_vis.m_color_type=MeshColorType::PerVertColor;
+//            Scene::show(selection,"selection");
+//            static size_t total_points = 0;
+//            static size_t selected_points = 0;
+//            if ( ImGui::Button("Count") )
+//            {
+//                total_points = 0;
+//                selected_points = 0;
+//                MeshSharedPtr selected_mesh = Scene::nr_meshes() > m_selected_mesh_idx ? m_view->m_scene->get_mesh_with_idx(m_selected_mesh_idx) : nullptr;
+//                if ( selected_mesh )
+//                {
+//                    total_points = selected_mesh->V.rows();
+//                    for ( int i = 0; i < selected_mesh->V.rows(); ++i)
+//                    {
+//                        const Eigen::Vector2f px = m_view->m_camera->project( selected_mesh->V.row(i).cast<float>().transpose(), view, proj, m_view->m_viewport_size).hnormalized();
+//                        if ( px.x() >= m_selection_points[0].x()
+//                             && px.x() <= m_selection_points[1].x()
+//                             && px.y() >= m_selection_points[0].y()
+//                             && px.y() <= m_selection_points[1].y()
+//                             )
+//                        {
+//                            ++selected_points;
+//                        }
+//                    }
+//                }
+//            }
+//            size_t unselected_points = total_points - selected_points;
+//            ImGui::Text(("Nr of selected points: " + format_with_commas(selected_points)).data());
+//            ImGui::Text(("Nr of unselected points: " + format_with_commas(unselected_points)).data());
+//            ImGui::Text(("Nr of total points: " + format_with_commas(total_points)).data());
+//            //VLOG(1) << "V=[" << selection->V.row(0) << " ; " << selection->V.row(1) << " ; " << selection->V.row(2) << " ; " << selection->V.row(3)<<"];";
+//        }
+//        if ( m_selection_edit )
+//        {
+//            edit_selection(m_selected_selection_idx);
+//        }
+//    }
 
     ImGui::Separator();
     if ( ImGui::CollapsingHeader("ViewFollower") )

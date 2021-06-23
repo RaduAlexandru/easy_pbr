@@ -32,7 +32,7 @@
 #include "tiny_obj_loader.h"
 
 //for reading pcd files
-#ifndef GIVE_A_FUCK_ABOUT_PCL
+#ifdef EASYPBR_WITH_PCL
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl/features/normal_3d.h>
@@ -863,7 +863,7 @@ bool Mesh::load_from_file(const std::string file_path){
         read_obj(file_path_abs);
     } else if (file_ext == "stl" || file_ext == "STL") {
         igl::readSTL(file_path_abs, V, F, NV);
-#ifdef GIVE_A_FUCK_ABOUT_PCL
+#ifdef EASYPBR_WITH_PCL
     }else if (file_ext == "pcd") {
         //read the cloud as general binary blob and then parse it to a certain type of point cloud http://pointclouds.org/documentation/tutorials/reading_pcd.php
         pcl::PCLPointCloud2 cloud_blob;
@@ -2339,7 +2339,7 @@ void Mesh::color_solid2pervert(){
 
 void Mesh::estimate_normals_from_neighbourhood(const float radius){
     CHECK(V.size()) << "We have no vertices";
-
+#ifdef EASYPBR_WITH_PCL
     //https://pointclouds.org/documentation/tutorials/normal_estimation.html
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -2382,9 +2382,7 @@ void Mesh::estimate_normals_from_neighbourhood(const float radius){
         // p.z=V(i,2);
         // cloud.push_back(p);
     }
-
-
-
+#endif
 }
 
 float Mesh::min_y(){
