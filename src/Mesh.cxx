@@ -32,11 +32,13 @@
 #include "tiny_obj_loader.h"
 
 //for reading pcd files
+#ifndef GIVE_A_FUCK_ABOUT_PCL
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/kdtree/kdtree_flann.h>
 // #include <pcl/search/impl/search.hpp>
+#endif
 // #include <sensor_msgs/PointCloud2.h>
 
 #include "nanoflann.hpp"
@@ -99,6 +101,7 @@ Mesh Mesh::clone(){
     cloned.UV=UV;
     cloned.V_tangent_u=V_tangent_u;
     cloned.V_length_v=V_length_v;
+    cloned.S_pred=S_pred;
     cloned.L_pred=L_pred;
     cloned.L_gt=L_gt;
     cloned.I=I;
@@ -130,7 +133,6 @@ Mesh Mesh::clone(){
 
 
 void Mesh::add(Mesh& new_mesh) {
-
     new_mesh.apply_model_matrix_to_cpu(true);
 
     if(V_blob.is_preallocated() ){ //if the mesh is preallocated, then we try to just copy to the matrices in the first empty space that has enough contiguous memory
@@ -161,6 +163,8 @@ void Mesh::add(Mesh& new_mesh) {
         V_tangent_u_new << V_tangent_u, new_mesh.V_tangent_u;
         Eigen::MatrixXd V_lenght_v_new(V_length_v.rows() + new_mesh.V_length_v.rows(), 4);
         V_lenght_v_new << V_length_v, new_mesh.V_length_v;
+        Eigen::MatrixXd S_pred_new(S_pred.rows() + new_mesh.S_pred.rows(), std::max<int>(S_pred.rows(),new_mesh.S_pred.rows()));
+        S_pred_new << S_pred, new_mesh.S_pred;
         Eigen::MatrixXi L_pred_new(L_pred.rows() + new_mesh.L_pred.rows(), 1);
         L_pred_new << L_pred, new_mesh.L_pred;
         Eigen::MatrixXi L_gt_new(L_gt.rows() + new_mesh.L_gt.rows(), 1);
@@ -179,6 +183,7 @@ void Mesh::add(Mesh& new_mesh) {
         UV=UV_new;
         V_tangent_u=V_tangent_u_new;
         V_length_v=V_lenght_v_new;
+        S_pred=S_pred_new;
         L_pred=L_pred_new;
         L_gt=L_gt_new;
         I=I_new;
@@ -210,6 +215,8 @@ void Mesh::add(Mesh& new_mesh) {
         V_tangent_u_new << V_tangent_u, new_mesh.V_tangent_u;
         Eigen::MatrixXd V_lenght_v_new(V_length_v.rows() + new_mesh.V_length_v.rows(), 1);
         V_lenght_v_new << V_length_v, new_mesh.V_length_v;
+        Eigen::MatrixXd S_pred_new(S_pred.rows() + new_mesh.S_pred.rows(), std::max<int>(S_pred.rows(),new_mesh.S_pred.rows()));
+        S_pred_new << S_pred, new_mesh.S_pred;
         Eigen::MatrixXi L_pred_new(L_pred.rows() + new_mesh.L_pred.rows(), 1);
         L_pred_new << L_pred, new_mesh.L_pred;
         Eigen::MatrixXi L_gt_new(L_gt.rows() + new_mesh.L_gt.rows(), 1);
@@ -228,6 +235,7 @@ void Mesh::add(Mesh& new_mesh) {
         UV=UV_new;
         V_tangent_u=V_tangent_u_new;
         V_length_v=V_lenght_v_new;
+        S_pred=S_pred_new;
         L_pred=L_pred_new;
         L_gt=L_gt_new;
         I=I_new;
@@ -518,6 +526,7 @@ void Mesh::clear() {
     UV.resize(0,0);
     V_tangent_u.resize(0,0);
     V_length_v.resize(0,0);
+    S_pred.resize(0,0);
     L_pred.resize(0,0);
     L_gt.resize(0,0);
     I.resize(0,0);
@@ -549,6 +558,7 @@ void Mesh::set_all_matrices_to_zero(){
     UV.setZero();
     V_tangent_u.setZero();
     V_length_v.setZero();
+    S_pred.setZero();
     L_pred.setZero();
     L_gt.setZero();
     I.setZero();
@@ -853,6 +863,7 @@ bool Mesh::load_from_file(const std::string file_path){
         read_obj(file_path_abs);
     } else if (file_ext == "stl" || file_ext == "STL") {
         igl::readSTL(file_path_abs, V, F, NV);
+#ifdef GIVE_A_FUCK_ABOUT_PCL
     }else if (file_ext == "pcd") {
         //read the cloud as general binary blob and then parse it to a certain type of point cloud http://pointclouds.org/documentation/tutorials/reading_pcd.php
         pcl::PCLPointCloud2 cloud_blob;
@@ -919,7 +930,7 @@ bool Mesh::load_from_file(const std::string file_path){
         //set the width and height from the pcd file
         m_width=cloud_blob.width;
         m_height=cloud_blob.height;
-
+#endif
     }else{
         LOG(WARNING) << "Not a known extension of mesh file: " << file_path_abs;
         return false;
@@ -1024,6 +1035,7 @@ void Mesh::remove_marked_vertices(const std::vector<bool>& mask, const bool keep
     UV=filter(UV, mask, keep, /*do_checks*/ false);
     V_tangent_u=filter(V_tangent_u, mask, keep, /*do_checks*/ false);
     V_length_v=filter(V_length_v, mask, keep, /*do_checks*/ false);
+    S_pred=filter(S_pred, mask, keep, /*do_checks*/ false);
     L_pred=filter(L_pred, mask, keep, /*do_checks*/ false);
     L_gt=filter(L_gt, mask, keep, /*do_checks*/ false);
     I=filter(I, mask, keep, /*do_checks*/ false);
@@ -1053,6 +1065,7 @@ void Mesh::set_marked_vertices_to_zero(const std::vector<bool>& mask, const bool
     UV=filter_set_zero(UV, mask, keep, /*do_checks*/ false);
     V_tangent_u=filter_set_zero(V_tangent_u, mask, keep, /*do_checks*/ false);
     V_length_v=filter_set_zero(V_length_v, mask, keep, /*do_checks*/ false);
+    S_pred=filter_set_zero(S_pred, mask, keep, /*do_checks*/ false);
     L_pred=filter_set_zero(L_pred, mask, keep, /*do_checks*/ false);
     L_gt=filter_set_zero(L_gt, mask, keep, /*do_checks*/ false);
     I=filter_set_zero(I, mask, keep, /*do_checks*/ false);
@@ -2932,6 +2945,7 @@ void Mesh::sanity_check() const{
     if (F.size()) LOG_IF_S(ERROR, F.maxCoeff()>V.rows()-1) << name << ": F indexes V at invalid poisitions, max coeff is " << F.maxCoeff() << " and V size is" << V.rows();
     if (E.size()) LOG_IF_S(ERROR, E.maxCoeff()>V.rows()-1) << name << ": E indexes V at invalid poisitions, max coeff is " << E.maxCoeff() << " and V size is" << V.rows() ;
     if (C.size()) LOG_IF_S(ERROR, C.rows()!=V.rows() ) << name << ": We have per vertex color but C and V don't match. C has rows " << C.rows() << " and V size is" << V.rows() ;
+    if (S_pred.size()) LOG_IF_S(ERROR, S_pred.size() && S_pred.rows()!=V.rows() ) << name << ": S_pred and V don't coincide in size, they are " << S_pred.rows() << " and " << V.rows();
     LOG_IF_S(ERROR, L_pred.size() && L_pred.rows()!=V.rows() ) << name << ": L_pred and V don't coincide in size, they are " << L_pred.rows() << " and " << V.rows();
     LOG_IF_S(ERROR, L_gt.size() && L_gt.rows()!=V.rows() ) << name << ": L_gt and V don't coincide in size, they are " << L_gt.rows() << " and " << V.rows();
 }
@@ -2952,6 +2966,7 @@ std::ostream& operator<<(std::ostream& os, const Mesh& m)
     m.V_tangent_u.size()?  os << "\t V_tangent_u has size: " << m.V_tangent_u.rows() << " x " << m.V_tangent_u.cols() << "\n"   :   os << "\t V_tangent_u is empty \n";
     m.V_length_v.size()?  os << "\t V_lenght_v has size: " << m.V_length_v.rows() << " x " << m.V_length_v.cols() << "\n"   :   os << "\t V_lenght_v is empty \n";
     m.D.size()?  os << "\t D has size: " << m.D.rows() << " x " << m.D.cols() << "\n"   :   os << "\t D is empty \n";
+    m.S_pred.size()?  os << "\t S_pred has size: " << m.S_pred.rows() << " x " << m.S_pred.cols() << "\n"   :   os << "\t S_pred is empty \n";
     m.L_pred.size()?  os << "\t L_pred has size: " << m.L_pred.rows() << " x " << m.L_pred.cols() << "\n"   :   os << "\t L_pred is empty \n";
     m.L_gt.size()?  os << "\t L_gt has size: " << m.L_gt.rows() << " x " << m.L_gt.cols() << "\n"   :   os << "\t L_gt is empty \n";
     m.I.size()?  os << "\t I has size: " << m.I.rows() << " x " << m.I.cols() << "\n"   :   os << "\t I is empty \n";
