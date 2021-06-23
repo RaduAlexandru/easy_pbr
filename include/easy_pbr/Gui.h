@@ -114,6 +114,13 @@ private:
     int m_traj_view_updates = 0;
     std::shared_ptr<Camera> m_preview_camera;
 
+    std::vector<Eigen::Vector2d> m_selection_points;
+    ImGuizmo::MODE m_selection_guizmo_mode = ImGuizmo::LOCAL;
+    ImGuizmo::OPERATION m_selection_guizmo_operation = ImGuizmo::TRANSLATE;
+    bool m_selection_should_draw = false;
+    bool m_selection_edit = false;
+    int m_selected_selection_idx = 0;
+
     void init_params(const std::string config_file);
     void init_style();
     void edit_transform(const std::shared_ptr<Mesh>& mesh);
@@ -127,7 +134,7 @@ private:
     void draw_profiler();
     void draw_drag_drop_text();
     void draw_trajectory(const std::string & trajectory_mesh_name, const std::string & frustum_mesh_name);
-
+    void edit_selection( const int & selection_idx );
 };
 
 } //namespace easy_pbr
