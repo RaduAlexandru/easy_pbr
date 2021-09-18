@@ -33,7 +33,7 @@
 	url = git@github.com:syoyo/tinyobjloader
 [submodule "deps/utils"]
 	path = deps/utils
-	url = git@github.com:RaduAlexandru/utils.git
+	url = git@github.com:JanQuenzel/utils.git
 [submodule "deps/easy_gl"]
 	path = deps/easy_gl
 	url = git@github.com:RaduAlexandru/EasyGL.git
