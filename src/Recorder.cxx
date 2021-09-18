@@ -4,6 +4,7 @@
 
 //my stuff
 #include "easy_pbr/Viewer.h"
+#include "easy_pbr/Camera.h"
 // #include "opencv_utils.h" //only for debugging
 #define ENABLE_GL_PROFILING 1
 #include "Profiler.h"
@@ -57,7 +58,7 @@ Recorder::~Recorder(){
 }
 
 bool Recorder::record(gl::Texture2D& tex, const std::string name, const std::string path){
-    tex.download_to_pbo();
+    GL_C( tex.download_to_pbo() );
 
     if( m_cv_mats_queue.size_approx()>100)
         VLOG(1) << "Enqueued too many cv_mats approx mats in queue: " << m_cv_mats_queue.size_approx();
@@ -126,6 +127,24 @@ bool Recorder::record(const std::string name, const std::string path){
 void Recorder::snapshot(const std::string name, const std::string path){
     //TODO put the bool for record_gui in the Recorder and then recorder either the final_fbo_with or without gui
     write_without_buffering(m_view->m_final_fbo_no_gui.tex_with_name("color_with_transparency_gtex"), name, path);
+}
+
+void Recorder::record_orbit(const std::string path){
+    int nr_images=360;
+    float angle_increment=360/nr_images; //each segment needs to have this many angles
+    m_view->m_show_gui=false; //this function is usually called by the gui, if we do again a view->update, it will try to make another frame for the gui and that will fail
+    for(int i=0; i<360; i++){
+        m_view->m_camera->orbit_y(angle_increment);
+        m_view->update();
+        std::string snapshot_name=std::to_string(i)+".png";
+        //record
+        if (m_view->m_record_with_transparency){
+            write_without_buffering(m_view->m_final_fbo_no_gui.tex_with_name("color_with_transparency_gtex"), snapshot_name, path);
+        }else{
+            write_without_buffering(m_view->m_final_fbo_no_gui.tex_with_name("color_without_transparency_gtex"), snapshot_name, path);
+        }
+    }
+    m_view->m_show_gui=true;
 }
 
 
@@ -270,7 +289,13 @@ void Recorder::write_to_file_threaded(){
             cv::cvtColor(cv_mat_flipped, cv_mat_flipped, cv::COLOR_BGR2RGB);
         }
         VLOG(1) << "writen image to " << mat_with_file.file_path;
-        cv::imwrite(mat_with_file.file_path, cv_mat_flipped);
+        bool result;
+        try{
+            result=cv::imwrite(mat_with_file.file_path, cv_mat_flipped);
+        }catch (const cv::Exception& ex){
+            LOG(FATAL) << "Exception saving image " << ex.what();
+        }
+        CHECK(result) << "Something went wrong when writing image";
         TIME_END("write_to_file");
 
     }
@@ -293,6 +318,18 @@ void Recorder::pause_recording(){
 }
 int Recorder::nr_images_recorded(){
     return m_nr_images_recorded;
+}
+bool Recorder::is_finished(){
+    // MatWithFilePath mat_with_file;
+    // bool found = m_cv_mats_queue.try_dequeue(mat_with_file);
+    bool is_empty= m_cv_mats_queue.size_approx() == 0;
+
+    return is_empty;
+
+    // if (found){
+    //     return
+    // }
+
 }
 
 

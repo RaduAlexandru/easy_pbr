@@ -49,6 +49,7 @@ namespace easy_pbr{
 
 
 class Scene;
+class Mesh;
 class MeshGL;
 class Camera;
 class Gui;
@@ -109,6 +110,7 @@ public:
     void hotload_shaders();
     void init_opengl();
     void update_meshes_gl();
+    void upload_single_mesh_to_gpu(const std::shared_ptr<Mesh> mesh_core); //it's nice to have this function to upload a single mesh because some external programs might need to use it to upload quickly a whole mesh to gl buffers
     void render_points(const std::shared_ptr<MeshGL> mesh);
     void render_points_to_gbuffer(const std::shared_ptr<MeshGL> mesh);
     void render_lines(const std::shared_ptr<MeshGL> mesh);
@@ -128,7 +130,7 @@ public:
 
 
     //rendering passes
-    void ssao_pass();
+    void ssao_pass(gl::GBuffer& gbuffer, std::shared_ptr<Camera> camera);
     void compose_final_image(const GLuint fbo_id);
     cv::Mat gbuffer_mat_with_name(const std::string name);
 
@@ -138,6 +140,8 @@ public:
     //getters
     gl::Texture2D& rendered_tex_no_gui(const bool with_transparency);
     gl::Texture2D& rendered_tex_with_gui();
+    cv::Mat rendered_mat_no_gui(const bool with_transparency);
+    cv::Mat rendered_mat_with_gui();
 
     // Callbacks
     void set_callbacks();
@@ -184,6 +188,7 @@ public:
     // gl::Texture2D m_posprocessed_tex; //after adding also any post processing like bloom and tone mapping and gamma correcting. Is in RGBA8
     gl::GBuffer m_final_fbo_no_gui; //after rendering also the lines and edges but before rendering the gui
     gl::GBuffer m_final_fbo_with_gui; //after we also render the gui into it
+    bool m_using_fat_gbuffer; //surfel splatting starts requires to use a gbuffer with half floats, this makes is so that there is no need for encoding an decoding normals, we can just sum them
 
     gl::Texture2D m_ao_tex;
     gl::Texture2D m_ao_blurred_tex;
@@ -206,9 +211,11 @@ public:
     int m_ssao_downsample;
     int m_nr_samples;
     float m_kernel_radius;
+    float m_max_ssao_distance;
     int m_ao_power;
     float m_sigma_spacial;
     float m_sigma_depth;
+    bool m_ssao_estimate_normals_from_depth;
     Eigen::Vector3f m_ambient_color;
     float m_ambient_color_power;
     bool m_enable_culling;
@@ -283,7 +290,6 @@ private:
     void apply_postprocess(); //grabs the composed_tex and the bloom_tex and sums them together, applies tone mapping and gamme correction
     void blend_bg(); //takes the post_processed image and blends a solid background color into it if needed.
 
-    bool m_using_fat_gbuffer; //surfel splatting starts requires to use a gbuffer with half floats, this makes is so that there is no need for encoding an decoding normals, we can just sum them
 
 
 };

@@ -23,9 +23,8 @@ namespace radu { namespace utils {
 
 namespace easy_pbr{
 
-BETTER_ENUM(MeshColorType, int, Solid = 0, PerVertColor, Texture, SemanticPred, SemanticGT, NormalVector, Height, Intensity, UV )
+BETTER_ENUM(MeshColorType, int, Solid = 0, PerVertColor, Texture, SemanticPred, SemanticGT, NormalVector, Height, Intensity, UV, NormalViewCoords )
 BETTER_ENUM(ColorSchemeType, int, Plasma = 0, Viridis, Magma )
-
 
 class MeshGL; //we forward declare this so we can have from here a pointer to the gpu stuff
 class LabelMngr;
@@ -93,6 +92,9 @@ struct VisOptions{
     }
     void set_color_uv(){
         m_color_type=MeshColorType::UV;
+    }
+    void set_color_normalvector_viewcoords(){
+        m_color_type=MeshColorType::NormalViewCoords;
     }
 
     bool operator==(const VisOptions& rhs) const{
@@ -257,6 +259,7 @@ public:
 
     void clear_C();
     void color_from_label_indices(Eigen::MatrixXi label_indices);
+    void color_from_mat(const cv::Mat& mat); //sample the mat using the UVS and store the pixel values into C
     Eigen::Vector3d centroid();
     void sanity_check() const; //check that all the data inside the mesh is valid, there are enough normals for each face, faces don't idx invalid points etc.
     //create certain meshes
@@ -266,6 +269,7 @@ public:
     void create_grid(const int nr_segments, const float y_pos, const float scale);
     void create_floor(const float y_pos, const float scale);
     void create_sphere(const Eigen::Vector3d& center, const double radius);
+    void create_cylinder(const Eigen::Vector3d& main_axis, const double height, const double radius, const bool origin_at_bottom);
     void add_child(std::shared_ptr<Mesh>& mesh); //add a child into the transformation hierarchy. Therefore when this object moves or rotates the children also do.
 
     //lots of mesh ops
@@ -273,7 +277,8 @@ public:
     void set_marked_vertices_to_zero(const std::vector<bool>& mask, const bool keep); //useful for when the actual removal of verts will destroy the organized structure
     void remove_vertices_at_zero(); // zero is used to denote the invalid vertex, we can remove them and rebuild F, E and the rest of indices with this function
     void remove_unreferenced_verts();
-    void remove_duplicate_vertices();
+    Eigen::VectorXi remove_duplicate_vertices(); //return the inverse_indirection which is a vector of size original_mesh.V.rows(). Says for each original V where it's now indexed in the merged mesh
+    void undo_remove_duplicate_vertices(const std::shared_ptr<Mesh>& original_mesh, const Eigen::VectorXi& inverse_indirection );
     void set_duplicate_verts_to_zero();
     void decimate(const int nr_target_faces);
     void upsample(const int nr_of_subdivisions);
@@ -286,7 +291,7 @@ public:
     void random_subsample(const float percentage_removal);
     void recalculate_normals(); //recalculates NF and NV
     void flip_normals();
-    void normalize_size(); //normalize the size of the mesh between [-1,1]
+    void normalize_size(); //normalize the size of the mesh between [0,1]
     void normalize_position(); //calculate the bounding box of the object and put it at 0.0.0
     Eigen::VectorXi fix_oversplit_due_to_blender_uv();
     void color_connected_components();

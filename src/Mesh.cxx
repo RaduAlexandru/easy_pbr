@@ -319,7 +319,6 @@ void Mesh::add(const std::vector<std::shared_ptr<Mesh>>&  meshes){
     int nr_I_added=0;
 
 
-
     //put the current matrices into the new ones
     //F
     int nr_additional_F= F.rows();
@@ -1117,7 +1116,7 @@ void Mesh::remove_unreferenced_verts(){
 
 }
 
-void Mesh::remove_duplicate_vertices(){
+Eigen::VectorXi Mesh::remove_duplicate_vertices(){
 
     Eigen::MatrixXd V_new;
     Eigen::VectorXi indirection; //size of V_new , says for each point where the original one was in mesh.V
@@ -1134,7 +1133,60 @@ void Mesh::remove_duplicate_vertices(){
     F=filter_apply_indirection(inverse_indirection_vec, F);
     E=filter_apply_indirection(inverse_indirection_vec, E);
 
+    //now that we merge the vertices we need to also somehow merge the vertex atributes, so merge the colors for examaple. UV cannot be merged since you would need to choose one or the other uv  coordinate, if you choose the wrong one you end up stretching the face all over the uv map
+    //We not efectivelly splat and acummulate the colors from the original mesh into the new mesh. So if V0 and v1 got merged together their colors would average on the new mesh
+    std::vector<int> nr_times_merged(V_new.rows(), 0); //stores for each new vertex, how many vertices it merged into itself
+    //get the nr of times merged
+    for (int i=0; i<V.rows(); i++){
+        int idx_new_mesh=inverse_indirection(i); //index saying for this old vertex, where it got merged into in the new mesh
+        nr_times_merged[idx_new_mesh]++;
+    }
+    //calcualte the average color, Intensity and the other per-vertex things for the merged vertices
+    //COLOR
+    if (C.size()){
+        Eigen::MatrixXd C_new;
+        C_new.resize(V_new.rows(), 3);
+        C_new.setZero();
+        for (int i=0; i<V.rows(); i++){
+            int idx_new_mesh=inverse_indirection(i); //index saying for this old vertex, where it got merged into in the new mesh
+            Eigen::Vector3d original_color=C.row(i);
+            C_new.row(idx_new_mesh)+=original_color;
+        }
+        //renormalize the colors
+        for (int i=0; i<V_new.rows(); i++){
+            C_new.row(i).array()/=nr_times_merged[i];
+        }
+        C=C_new;
+    }
+
     V=V_new;
+
+    m_is_dirty=true;
+
+    return inverse_indirection;
+}
+
+void Mesh::undo_remove_duplicate_vertices(const std::shared_ptr<Mesh>& original_mesh, const Eigen::VectorXi& inverse_indirection ){
+
+    CHECK(inverse_indirection.size()==original_mesh->V.rows()) << "The inverse_indirection has to have the same size as the original mesh vertices. Indirection is " << inverse_indirection.size() << " original mesh V is " << original_mesh->V.rows();
+
+    //check the position that the vertices now have in the merged mesh and copy them
+    Eigen::MatrixXd V_undone=original_mesh->V;
+    for (int i=0; i<V_undone.rows(); i++){
+        int idx_merged_mesh=inverse_indirection(i);
+        Eigen::Vector3d merged_point=V.row(idx_merged_mesh);
+        V_undone.row(i)=merged_point;
+    }
+    V=V_undone;
+
+
+    //original indices
+    if(original_mesh->F.size()) F=original_mesh->F;
+    if(original_mesh->E.size()) E=original_mesh->E;
+    //copy rest of atributes that got merged in the removing of duplicates
+    if(original_mesh->C.size()) C=original_mesh->C;
+    m_is_dirty=true;
+
 }
 
 //instead of removing the duplicate verts, we sometimes just want them set to zero so they don't interfere with the organized datastrucutre of a velodyne cloud
@@ -1791,6 +1843,55 @@ void Mesh::create_sphere(const Eigen::Vector3d& center, const double radius){
     }
 }
 
+void Mesh::create_cylinder(const Eigen::Vector3d& main_axis, const double height, const double radius, const bool origin_at_bottom){
+    load_from_file( std::string(EASYPBR_DATA_DIR)+"/cylinder_14.obj" );
+
+    //make it a height of 1
+    V.col(1) = V.col(1)*0.5;
+
+
+    //if the origin is at the bottom, then we move the primtive
+    if(origin_at_bottom){
+        for (int i = 0; i < V.rows(); i++) {
+            Eigen::Vector3d point = V.row(i);
+            V.row(i) << point.x(), point.y()+0.5, point.z();
+        }
+    }
+
+
+    //change the height and radius
+    for (int i = 0; i < V.rows(); i++) {
+        Eigen::Vector3d point = V.row(i);
+        V.row(i) << point.x()*radius, point.y()*height, point.z()*radius;
+    }
+
+
+
+    //rotate towards the main axis. The cylinder stads with the main axis being the y axis so it's upwright
+    Eigen::Vector3d canonical_direction=  Eigen::Vector3d::UnitY();
+    Eigen::Vector3d new_direction=main_axis.normalized();
+    if (  (new_direction-canonical_direction).norm()>1e-7  ){ //if the vectors are the same, then there is no need to rotate, also the cross product would fail
+
+        Eigen::Vector3d axis= (new_direction.cross(canonical_direction)).normalized();
+        double angle= - std::acos( new_direction.dot(canonical_direction)  );
+
+        //get axis angle
+        Eigen::AngleAxisd angle_axis_eigen;
+        angle_axis_eigen.axis()=axis;
+        angle_axis_eigen.angle()=angle;
+
+        //get rotation
+        Eigen::Matrix3d R=angle_axis_eigen.toRotationMatrix();
+
+        //rotate the mesh
+        Eigen::Affine3d tf;
+        tf.setIdentity();
+        tf.linear()=R;
+        transform_vertices_cpu(tf,true);
+
+    }
+}
+
 
 
 
@@ -1808,6 +1909,92 @@ void Mesh::color_from_label_indices(Eigen::MatrixXi label_indices){
         C(i,1)=color(1);
         C(i,2)=color(2);
     }
+}
+
+void Mesh::color_from_mat(const cv::Mat& mat){
+    CHECK(UV.size()) << "In order to use color_from_mat you need UVs";
+    CHECK(mat.data) << "Mat is empty";
+
+    VLOG(1) << "mat in is " << radu::utils::type2string(mat.type());
+    int channels=mat.channels();
+
+    cv::Mat mat_float; //just convert it to float so that we don't need to deal with different types
+    if (mat.depth()==CV_32F){
+        VLOG(1) << "Mat is already in float";
+        if (channels==1) mat.convertTo(mat_float, CV_32FC1);
+        if (channels==2) mat.convertTo(mat_float, CV_32FC2);
+        if (channels==3) mat.convertTo(mat_float, CV_32FC3);
+        if (channels==4) mat.convertTo(mat_float, CV_32FC4);
+    }else{
+        VLOG(1) << "conveting mat to float";
+        if (channels==1) mat.convertTo(mat_float, CV_32FC1, 1.0/255.0);
+        if (channels==2) mat.convertTo(mat_float, CV_32FC2, 1.0/255.0);
+        if (channels==3) mat.convertTo(mat_float, CV_32FC3, 1.0/255.0);
+        if (channels==4) mat.convertTo(mat_float, CV_32FC4, 1.0/255.0);
+    }
+
+    VLOG(1) << "mat_float in is " << radu::utils::type2string(mat_float.type());
+
+    int rows=mat_float.rows;
+    int cols=mat_float.cols;
+    VLOG(1) << "ne channels is " << channels;
+
+    C.resize(V.rows(),3);
+    C.setZero();
+
+    for(int i=0; i<V.rows(); i++){
+        float u=UV(i,0);
+        float v=UV(i,1);
+        //get the uv from [0,1] to range [0,img size]
+        u=u*cols;
+        v=v*rows;
+
+        int x=(int)u;
+        int y=rows-(int)v; //flip up and down
+
+        //if it's out of bounds by one pixel, try to bring it back within the bounds of the image
+        if (x<0) x+=1;
+        if (y<0) y+=1;
+        if (x>=cols) x-=1;
+        if (y>=rows) y-=1;
+
+
+        if(x>=0 && x<cols && y>=0 && y<rows ){
+            float r,g,b;
+            r=0;
+            g=0;
+            b=0;
+            if (channels==1){
+                r=mat_float.at<float>(y,x);
+                g=r;
+                b=r;
+            }else if (channels==2){
+                r=mat_float.at<cv::Vec2f>(y,x)[0];
+                g=mat_float.at<cv::Vec2f>(y,x)[1];
+                b=r;
+            }else if (channels==3){
+                r=mat_float.at<cv::Vec3f>(y,x)[0];
+                g=mat_float.at<cv::Vec3f>(y,x)[1];
+                b=mat_float.at<cv::Vec3f>(y,x)[2];
+            }else if (channels==4){
+                r=mat_float.at<cv::Vec4f>(y,x)[0];
+                g=mat_float.at<cv::Vec4f>(y,x)[1];
+                b=mat_float.at<cv::Vec4f>(y,x)[2];
+            }
+            // float r=mat_float.at<cv::Vec3f>(y,x)[0];
+            // float g=mat_float.at<cv::Vec3f>(y,x)[1];
+            // float b=mat_float.at<cv::Vec3f>(y,x)[2];
+            // VLOG(1) << "Pixel at " << u << " " << v << " is " << r << " " << g << " " << b;
+            C(i,0)=r;
+            C(i,1)=g;
+            C(i,2)=b;
+        }else{
+            // VLOG(1) << "out of bounds at" << u << " " << v << " xy is " << x << " " << y;
+        }
+
+    }
+
+
 }
 
 Eigen::Vector3d Mesh::centroid(){
