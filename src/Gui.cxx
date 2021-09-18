@@ -385,6 +385,7 @@ void Gui::draw_main_menu(){
                 ImGui::Unindent(10.0f*m_hidpi_scaling );
             if( ImGui::Checkbox("Show mesh", &mesh->m_vis.m_show_mesh) ) {  mesh->m_is_shadowmap_dirty=true;  }
             if( ImGui::Checkbox("Show normals", &mesh->m_vis.m_show_normals) ) {  mesh->m_is_shadowmap_dirty=true;  }
+            if ( mesh->m_vis.m_show_normals ) { ImGui::SliderFloat("Normal_scale", &mesh->m_vis.m_normals_scale, -1.0f, 1.0f) ;  }
             if( ImGui::Checkbox("Show wireframe", &mesh->m_vis.m_show_wireframe)) {  mesh->m_is_shadowmap_dirty=true; }
             if( ImGui::Checkbox("Show surfels", &mesh->m_vis.m_show_surfels) ) { mesh->m_is_shadowmap_dirty=true; }
             if( ImGui::Checkbox("Custom shader", &mesh->m_vis.m_use_custom_shader )){
@@ -595,11 +596,11 @@ void Gui::draw_main_menu(){
             if (ImGui::RadioButton("Local", m_guizmo_mode == ImGuizmo::LOCAL)) { m_guizmo_mode = ImGuizmo::LOCAL; } ImGui::SameLine();
             if (ImGui::RadioButton("World", m_guizmo_mode == ImGuizmo::WORLD)) { m_guizmo_mode = ImGuizmo::WORLD; }
 
-            if (ImGui::Button("Copy Pose")){ 
+            if (ImGui::Button("Copy Pose")){
                 Eigen::Affine3d model_matrix=m_view->m_scene->get_mesh_with_idx(m_selected_mesh_idx)->model_matrix();
                 std::vector<std::string> pose_vec=radu::utils::tf_matrix2vecstring(model_matrix);
                 std::string pose_string=radu::utils::join(pose_vec, " ");
-                VLOG(1) << "Copied model matrix to clipboard: " << pose_string; 
+                VLOG(1) << "Copied model matrix to clipboard: " << pose_string;
                 glfwSetClipboardString(m_view->m_window, pose_string.c_str());
             }
 
@@ -673,6 +674,7 @@ void Gui::draw_main_menu(){
         ImGui::SameLine(); help_marker("The SSAO map is blurred with a bilateral blur with a sigma in the spacial dimension and in the depth. This is the sigma in the spacial dimension and higher values yield blurrier AO.");
         ImGui::SliderFloat("Sigma D", &m_view->m_sigma_depth, 0.1, 5.0);
         ImGui::SameLine(); help_marker("The SSAO map is blurred with a bilateral blur with a sigma in the spacial dimension and in the depth. This is the sigma in depth so as to avoid blurring over depth discontinuities. The higher the value, the more tolerant the blurring is to depth discontinuities.");
+        ImGui::Checkbox("Estimate_normals_from_depth", &m_view->m_ssao_estimate_normals_from_depth);
     }
 
 
@@ -1301,6 +1303,9 @@ void Gui::draw_main_menu(){
         if ( ImGui::Button("Pause") )
         {
             m_view->m_recorder->pause_recording();
+        }
+        if(ImGui::Button("Record orbit") ){
+            m_view->m_recorder->record_orbit( m_view->m_recording_path );
         }
     }
 

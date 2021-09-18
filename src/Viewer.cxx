@@ -273,9 +273,11 @@ void Viewer::init_params(const std::string config_file){
     m_enable_ssao = ssao_cfg.get_or("enable_ssao", default_ssao_cfg);
     m_ssao_downsample = ssao_cfg.get_or("ao_downsample", default_ssao_cfg);
     m_kernel_radius = ssao_cfg.get_float_else_default_else_nan("kernel_radius", default_ssao_cfg);
+    m_max_ssao_distance = ssao_cfg.get_or("max_ssao_distance", default_ssao_cfg);
     m_ao_power = ssao_cfg.get_or("ao_power", default_ssao_cfg);
     m_sigma_spacial = ssao_cfg.get_or("ao_blur_sigma_spacial", default_ssao_cfg);
     m_sigma_depth = ssao_cfg.get_or("ao_blur_sigma_depth", default_ssao_cfg);
+    m_ssao_estimate_normals_from_depth= ssao_cfg.get_or("ssao_estimate_normals_from_depth", default_ssao_cfg);
 
     // //bloom
     m_enable_bloom = bloom_cfg.get_or("enable_bloom", default_bloom_cfg);
@@ -423,6 +425,7 @@ void Viewer::compile_shaders(){
     m_blend_bg_shader.compile( std::string(EASYPBR_SHADERS_PATH)+"/render/blend_bg_vert.glsl", std::string(EASYPBR_SHADERS_PATH)+"/render/blend_bg_frag.glsl"  );
 
     m_ssao_ao_pass_shader.compile(std::string(EASYPBR_SHADERS_PATH)+"/ssao/ao_pass_vert.glsl", std::string(EASYPBR_SHADERS_PATH)+"/ssao/ao_pass_frag.glsl" );
+    // m_ssao_ao_pass_shader.compile(std::string(EASYPBR_SHADERS_PATH)+"/ssao/ao_pass_pure_depth_vert.glsl", std::string(EASYPBR_SHADERS_PATH)+"/ssao/ao_pass_pure_depth_frag.glsl" );
     // m_depth_linearize_shader.compile(std::string(PROJECT_SOURCE_DIR)+"/shaders/ssao/depth_linearize_compute.glsl");
     m_depth_linearize_shader.compile(std::string(EASYPBR_SHADERS_PATH)+"/ssao/depth_linearize_vert.glsl", std::string(EASYPBR_SHADERS_PATH)+"/ssao/depth_linearize_frag.glsl");
     m_bilateral_blur_shader.compile(std::string(EASYPBR_SHADERS_PATH)+"/ssao/bilateral_blur_vert.glsl", std::string(EASYPBR_SHADERS_PATH)+"/ssao/bilateral_blur_frag.glsl");
@@ -980,7 +983,7 @@ void Viewer::draw(const GLuint fbo_id){
 
     //ao_pass
     if(m_enable_ssao){
-        ssao_pass();
+        ssao_pass(m_gbuffer, m_camera);
     }else{
         // m_gbuffer.tex_with_name("position_gtex").generate_mipmap(m_ssao_downsample); //kinda hacky thing to account for possible resizes of the gbuffer and the fact that we might not have mipmaps in it. This solves the black background issue
     }
@@ -1044,6 +1047,45 @@ void Viewer::draw(const GLuint fbo_id){
 
 
 
+void Viewer::upload_single_mesh_to_gpu(const std::shared_ptr<Mesh> mesh_core){
+    if(mesh_core->m_vis.m_is_visible && (mesh_core->m_is_dirty || mesh_core->is_any_texture_dirty()) ) { //the mesh gl needs updating
+
+        // VLOG(1) << "mesh with name " << mesh_core->name << " needs updating is dirty is " << mesh_core->m_is_dirty << "texture dirty is " << mesh_core->is_any_texture_dirty();
+
+        //find the meshgl  with the same name
+        bool found=false;
+        int idx_found=-1;
+        for(size_t gl_idx = 0; gl_idx < m_meshes_gl.size(); gl_idx++){
+            if(m_meshes_gl[gl_idx]->m_core->name==mesh_core->name){
+                found=true;
+                idx_found=gl_idx;
+                break;
+            }
+        }
+
+
+        if(found){
+            // VLOG(1) << "found";
+            m_meshes_gl[idx_found]->assign_core(mesh_core);
+            mesh_core->assign_mesh_gpu(m_meshes_gl[idx_found]); // cpu data points to the gpu implementation
+            m_meshes_gl[idx_found]->upload_to_gpu();
+            m_meshes_gl[idx_found]->sanity_check(); //check that we have for sure all the normals for all the vertices and faces and that everything is correct
+        }else{
+            // VLOG(1) << "not found";
+            MeshGLSharedPtr mesh_gpu=MeshGL::create();
+            mesh_gpu->assign_core(mesh_core); //GPU implementation points to the cpu data
+            mesh_core->assign_mesh_gpu(mesh_gpu); // cpu data points to the gpu implementation
+            mesh_gpu->upload_to_gpu();
+            mesh_gpu->sanity_check(); //check that we have for sure all the normals for all the vertices and faces and that everything is correct
+            m_meshes_gl.push_back(mesh_gpu);
+        }
+
+
+
+    }
+
+}
+
 void Viewer::update_meshes_gl(){
 
 
@@ -1051,41 +1093,7 @@ void Viewer::update_meshes_gl(){
     //Check if we need to upload to gpu
     for(int i=0; i<m_scene->nr_meshes(); i++){
         MeshSharedPtr mesh_core=m_scene->get_mesh_with_idx(i);
-        if(mesh_core->m_vis.m_is_visible && (mesh_core->m_is_dirty || mesh_core->is_any_texture_dirty()) ) { //the mesh gl needs updating
-
-            // VLOG(1) << "mesh with name " << mesh_core->name << " needs updating is dirty is " << mesh_core->m_is_dirty << "texture dirty is " << mesh_core->is_any_texture_dirty();
-
-            //find the meshgl  with the same name
-            bool found=false;
-            int idx_found=-1;
-            for(size_t gl_idx = 0; gl_idx < m_meshes_gl.size(); gl_idx++){
-                if(m_meshes_gl[gl_idx]->m_core->name==mesh_core->name){
-                    found=true;
-                    idx_found=gl_idx;
-                    break;
-                }
-            }
-
-
-            if(found){
-                // VLOG(1) << "found";
-                m_meshes_gl[idx_found]->assign_core(mesh_core);
-                mesh_core->assign_mesh_gpu(m_meshes_gl[idx_found]); // cpu data points to the gpu implementation
-                m_meshes_gl[idx_found]->upload_to_gpu();
-                m_meshes_gl[idx_found]->sanity_check(); //check that we have for sure all the normals for all the vertices and faces and that everything is correct
-            }else{
-                // VLOG(1) << "not found";
-                MeshGLSharedPtr mesh_gpu=MeshGL::create();
-                mesh_gpu->assign_core(mesh_core); //GPU implementation points to the cpu data
-                mesh_core->assign_mesh_gpu(mesh_gpu); // cpu data points to the gpu implementation
-                mesh_gpu->upload_to_gpu();
-                mesh_gpu->sanity_check(); //check that we have for sure all the normals for all the vertices and faces and that everything is correct
-                m_meshes_gl.push_back(mesh_gpu);
-            }
-
-
-
-        }
+        upload_single_mesh_to_gpu(mesh_core);
     }
 
 
@@ -1423,6 +1431,7 @@ void Viewer::render_mesh_to_gbuffer(const MeshGLSharedPtr mesh){
     //shader setup
     m_draw_mesh_shader.use();
     m_draw_mesh_shader.uniform_bool(m_render_uv_to_gbuffer, "render_uv_to_gbuffer");
+    m_draw_mesh_shader.uniform_4x4(V, "V");
     m_draw_mesh_shader.uniform_4x4(M, "M");
     m_draw_mesh_shader.uniform_4x4(MV, "MV");
     m_draw_mesh_shader.uniform_4x4(MVP, "MVP");
@@ -1629,7 +1638,7 @@ void Viewer::render_surfels_to_gbuffer(const MeshGLSharedPtr mesh){
 
 }
 
-void Viewer::ssao_pass(){
+void Viewer::ssao_pass(gl::GBuffer& gbuffer, std::shared_ptr<Camera> camera){
 
     TIME_SCOPE("ssao_pass_full");
 
@@ -1641,12 +1650,12 @@ void Viewer::ssao_pass(){
     glDepthMask(false);
     glDisable(GL_DEPTH_TEST);
     //viewport setup. We render into a smaller viewport so tha the ao_tex is a bit smaller
-    Eigen::Vector2i new_viewport_size=calculate_mipmap_size(m_gbuffer.width(), m_gbuffer.height(), m_ssao_downsample);
+    Eigen::Vector2i new_viewport_size=calculate_mipmap_size(gbuffer.width(), gbuffer.height(), m_ssao_downsample);
     glViewport(0.0f , 0.0f, new_viewport_size.x(), new_viewport_size.y() );
     //deal with the textures
     m_ao_tex.allocate_or_resize(GL_R8, GL_RED, GL_UNSIGNED_BYTE, new_viewport_size.x(), new_viewport_size.y() ); //either fully allocates it or resizes if the size changes
     m_ao_tex.clear();
-    m_gbuffer.tex_with_name("depth_gtex").generate_mipmap(m_ssao_downsample);
+    gbuffer.tex_with_name("depth_gtex").generate_mipmap(m_ssao_downsample);
 
 
 
@@ -1663,9 +1672,9 @@ void Viewer::ssao_pass(){
 
     m_depth_linearize_shader.use();
     m_depth_linearize_shader.uniform_int(m_ssao_downsample, "pyr_lvl");
-    m_depth_linearize_shader.uniform_float( m_camera->m_far / (m_camera->m_far - m_camera->m_near), "projection_a"); // according to the formula at the bottom of article https://mynameismjp.wordpress.com/2010/09/05/position-from-depth-3/
-    m_depth_linearize_shader.uniform_float( (-m_camera->m_far * m_camera->m_near) / (m_camera->m_far - m_camera->m_near) , "projection_b");
-    m_depth_linearize_shader.bind_texture(m_gbuffer.tex_with_name("depth_gtex"), "depth_tex");
+    m_depth_linearize_shader.uniform_float( camera->m_far / (camera->m_far - camera->m_near), "projection_a"); // according to the formula at the bottom of article https://mynameismjp.wordpress.com/2010/09/05/position-from-depth-3/
+    m_depth_linearize_shader.uniform_float( (-camera->m_far * camera->m_near) / (camera->m_far - camera->m_near) , "projection_b");
+    m_depth_linearize_shader.bind_texture(gbuffer.tex_with_name("depth_gtex"), "depth_tex");
 
     m_depth_linearize_shader.draw_into(m_depth_linear_tex, "depth_linear_out");
 
@@ -1683,8 +1692,8 @@ void Viewer::ssao_pass(){
     //SSAO----------------------------------------
     TIME_START("ao_pass");
     //matrix setup
-    Eigen::Matrix3f V_rot = Eigen::Affine3f(m_camera->view_matrix()).linear(); //for rotating the normals from the world coords to the cam_coords
-    Eigen::Matrix4f P = m_camera->proj_matrix(m_gbuffer.width(), m_gbuffer.height());
+    Eigen::Matrix3f V_rot = Eigen::Affine3f(camera->view_matrix()).linear(); //for rotating the normals from the world coords to the cam_coords
+    Eigen::Matrix4f P = camera->proj_matrix(gbuffer.width(), gbuffer.height());
     Eigen::Matrix4f P_inv=P.inverse();
 
 
@@ -1702,13 +1711,17 @@ void Viewer::ssao_pass(){
     m_ssao_ao_pass_shader.uniform_array_v3_float(m_random_samples,"random_samples");
     m_ssao_ao_pass_shader.uniform_int(m_random_samples.rows(),"nr_samples");
     m_ssao_ao_pass_shader.uniform_float(m_kernel_radius,"kernel_radius");
+    m_ssao_ao_pass_shader.uniform_float(m_max_ssao_distance,"max_ssao_distance");
     // m_ssao_ao_pass_shader.uniform_int(m_ssao_downsample, "pyr_lvl"); //no need for pyramid because we only sample from depth_linear_tex which is already downsampled and has no mipmap
     // m_ssao_ao_pass_shader.bind_texture(m_depth_linear_tex,"depth_linear_tex");
     //attempt 2 with depth Not linear because using the linear depth seems to give wrong ssao when camera is near for some reason..
-    m_ssao_ao_pass_shader.uniform_float( m_camera->m_far / (m_camera->m_far - m_camera->m_near), "projection_a"); // according to the formula at the bottom of article https://mynameismjp.wordpress.com/2010/09/05/position-from-depth-3/
-    m_ssao_ao_pass_shader.uniform_float( (-m_camera->m_far * m_camera->m_near) / (m_camera->m_far - m_camera->m_near) , "projection_b");
-    m_ssao_ao_pass_shader.bind_texture(m_gbuffer.tex_with_name("depth_gtex"),"depth_tex");
-    m_ssao_ao_pass_shader.bind_texture(m_gbuffer.tex_with_name("normal_gtex"),"normal_tex");
+    m_ssao_ao_pass_shader.uniform_float( camera->m_far / (camera->m_far - camera->m_near), "projection_a"); // according to the formula at the bottom of article https://mynameismjp.wordpress.com/2010/09/05/position-from-depth-3/
+    m_ssao_ao_pass_shader.uniform_float( (-camera->m_far * camera->m_near) / (camera->m_far - camera->m_near) , "projection_b");
+    m_ssao_ao_pass_shader.uniform_bool(m_ssao_estimate_normals_from_depth, "ssao_estimate_normals_from_depth");
+    m_ssao_ao_pass_shader.bind_texture(gbuffer.tex_with_name("depth_gtex"),"depth_tex");
+    if( !m_ssao_estimate_normals_from_depth){
+        m_ssao_ao_pass_shader.bind_texture(gbuffer.tex_with_name("normal_gtex"),"normal_tex");
+    }
     m_ssao_ao_pass_shader.bind_texture(m_rvec_tex,"rvec_tex");
 
     m_ssao_ao_pass_shader.draw_into(m_ao_tex, "ao_out");
@@ -1734,7 +1747,7 @@ void Viewer::ssao_pass(){
     glDisable(GL_DEPTH_TEST);
 
     //viewport setup. We render into a smaller viewport so tha the ao_tex is a bit smaller
-    new_viewport_size=calculate_mipmap_size(m_gbuffer.width(), m_gbuffer.height(), m_ssao_downsample);
+    new_viewport_size=calculate_mipmap_size(gbuffer.width(), gbuffer.height(), m_ssao_downsample);
     glViewport(0.0f , 0.0f, new_viewport_size.x(), new_viewport_size.y() );
 
 
@@ -2334,6 +2347,15 @@ gl::Texture2D& Viewer::rendered_tex_no_gui(const bool with_transparency){
 gl::Texture2D& Viewer::rendered_tex_with_gui(){
     return m_final_fbo_with_gui.tex_with_name("color_gtex");
 }
+cv::Mat Viewer::rendered_mat_no_gui(const bool with_transparency){
+    gl::Texture2D& tex=rendered_tex_no_gui(with_transparency);
+    return tex.download_to_cv_mat();
+}
+cv::Mat Viewer::rendered_mat_with_gui(){
+    gl::Texture2D& tex=rendered_tex_with_gui();
+    return tex.download_to_cv_mat();
+}
+
 cv::Mat Viewer::gbuffer_mat_with_name(const std::string name){
     return m_gbuffer.tex_with_name(name).download_to_cv_mat();
 }

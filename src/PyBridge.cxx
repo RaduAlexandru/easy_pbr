@@ -26,6 +26,8 @@
 #include "UtilsGL.h"
 #include "Profiler.h"
 
+#include "opencv_utils.h"
+
 
 // https://pybind11.readthedocs.io/en/stable/advanced/cast/stl.html
 // PYBIND11_MAKE_OPAQUE(std::vector<int>); //to be able to pass vectors by reference to functions and have things like push back actually work
@@ -120,6 +122,7 @@ PYBIND11_MODULE(easypbr, m) {
         return m;
       } )
     .def("from_file", [](cv::Mat &m, const std::string path) {  m=cv::imread(path, cv::IMREAD_UNCHANGED);  } )
+    .def("to_file", [](cv::Mat &m, const std::string path) {  cv::imwrite(path,m);  } )
     .def("set_alpha_to_value", [](cv::Mat &m, const int val) {
         CHECK(m.channels()==4) << "Mat needs to have 4 channels and it only has " << m.channels();
         cv::Mat mat;
@@ -129,12 +132,15 @@ PYBIND11_MODULE(easypbr, m) {
         mat.setTo(cv::Scalar::all(val), (channels[3]<255));
         m=mat;
       } )
+    .def("clone", [](cv::Mat &m) {  return m.clone();  } )
     .def("set_val", [](cv::Mat &m, const float val) {  m = cv::Scalar(val); } )
     .def("set_val", [](cv::Mat &m, const float r, const float g) {  m = cv::Scalar(r,g); } )
     .def("set_val", [](cv::Mat &m, const float r, const float g, const float b) {  m = cv::Scalar(b,g,r); } )
     .def("set_val", [](cv::Mat &m, const float r, const float g, const float b, const float alpha) {  m = cv::Scalar(b,g,r, alpha); } )
     .def("hsv2rgb", [](cv::Mat &m) {  cv::Mat res; cv::cvtColor(m, res, cv::COLOR_HSV2RGB); return res; } )
     .def("hsv2bgr", [](cv::Mat &m) {  cv::Mat res; cv::cvtColor(m, res, cv::COLOR_HSV2BGR); return res; } )
+    .def("rgb2bgr", [](cv::Mat &m) {  cv::Mat res; cv::cvtColor(m, res, cv::COLOR_RGB2BGR); return res; } )
+    .def("bgr2rgb", [](cv::Mat &m) {  cv::Mat res; cv::cvtColor(m, res, cv::COLOR_BGR2RGB); return res; } )
     // .def("rgba2rgbblack", [](cv::Mat &m ) {  m=cv::imread(path, cv::IMREAD_UNCHANGED);  } )
     .def("flip_y", [](cv::Mat &m) {  cv::Mat flipped; cv::flip(m, flipped, 0); m=flipped; return flipped;  } )
     .def("flip_x", [](cv::Mat &m) {  cv::Mat flipped; cv::flip(m, flipped, 1); m=flipped; return flipped;  } )
@@ -143,7 +149,9 @@ PYBIND11_MODULE(easypbr, m) {
     .def("channels", &cv::Mat::channels )
     .def("empty", &cv::Mat::empty )
     .def("to_cv8u", [](cv::Mat &m) {  cv::Mat out; m.convertTo(out, CV_8U, 255, 0);  m=out; return out;  } )
-    .def("to_file", [](cv::Mat &m, const std::string path) {  cv::imwrite(path,m);  } )
+    .def("blend", [](cv::Mat &cur, cv::Mat &src2, float alpha ) { cv::Mat dst; cv::addWeighted( cur, alpha, src2, 1-alpha, 0.0, dst);  return dst;   } )
+    .def("hconcat", [](cv::Mat &cur, cv::Mat &src1 ) { cv::Mat dst; cv::hconcat(cur,src1,dst);  return dst;   } )
+    .def("vconcat", [](cv::Mat &cur, cv::Mat &src1 ) { cv::Mat dst; cv::vconcat(cur,src1,dst);  return dst;   } )
     // .def("rows", [](const cv::Mat &m) {  return m.rows;  }  )
     ;
     // py::class_<Eigen::Affine3f> (m, "Eigen::Affine3f")
@@ -234,7 +242,7 @@ PYBIND11_MODULE(easypbr, m) {
     py::class_<Frame> (m, "Frame")
     .def(py::init<>())
     // .def_readwrite("rgb_32f", &Frame::rgb_32f) //not possible in pybind. You would need to wrap the opencv into a matrix type or soemthing like that
-    .def("create_frustum_mesh", &Frame::create_frustum_mesh, py::arg("scale_multiplier") = 1.0, py::arg("show_texture")=true)
+    .def("create_frustum_mesh", &Frame::create_frustum_mesh, py::arg("scale_multiplier") = 1.0, py::arg("show_texture")=true, py::arg("texture_max_size")=256 )
     .def("subsample", &Frame::subsample )
     .def("depth2world_xyz_mat", &Frame::depth2world_xyz_mat )
     .def("depth2world_xyz_mesh", &Frame::depth2world_xyz_mesh )
@@ -257,15 +265,17 @@ PYBIND11_MODULE(easypbr, m) {
     .def("add_extra_field", &Frame::add_extra_field<float> )
     .def("add_extra_field", &Frame::add_extra_field<double> )
     .def("add_extra_field", &Frame::add_extra_field<std::string> )
-    .def("add_extra_field", &Frame::add_extra_field<cv::Mat> )
-    .def("get_extra_field_int", &Frame::get_extra_field<int> )
-    .def("get_extra_field_float", &Frame::get_extra_field<float> )
-    .def("get_extra_field_double", &Frame::get_extra_field<double> )
-    .def("get_extra_field_string", &Frame::get_extra_field<std::string> )
-    .def("get_extra_field_mat", &Frame::get_extra_field<cv::Mat> )
-    .def("get_extra_field_matrixXi", &Frame::get_extra_field<Eigen::MatrixXi> )
-    .def("get_extra_field_matrixXf", &Frame::get_extra_field<Eigen::MatrixXf> )
-    .def("get_extra_field_matrixXd", &Frame::get_extra_field<Eigen::MatrixXd> )
+    .def("add_extra_field", &Frame::add_extra_field<Eigen::MatrixXi> )
+    .def("add_extra_field", &Frame::add_extra_field<Eigen::MatrixXf> )
+    .def("add_extra_field", &Frame::add_extra_field<Eigen::MatrixXd> )
+    .def("get_extra_field", &Frame::get_extra_field<int> )
+    .def("get_extra_field", &Frame::get_extra_field<float> )
+    .def("get_extra_field", &Frame::get_extra_field<double> )
+    .def("get_extra_field", &Frame::get_extra_field<std::string> )
+    .def("get_extra_field", &Frame::get_extra_field<cv::Mat> )
+    .def("get_extra_field", &Frame::get_extra_field<Eigen::MatrixXi> )
+    .def("get_extra_field", &Frame::get_extra_field<Eigen::MatrixXf> )
+    .def("get_extra_field", &Frame::get_extra_field<Eigen::MatrixXd> )
     .def_readwrite("is_shell", &Frame::is_shell )
     .def_readwrite("tf_cam_world", &Frame::tf_cam_world )
     .def_readwrite("K", &Frame::K )
@@ -306,6 +316,9 @@ PYBIND11_MODULE(easypbr, m) {
     .def("load_environment_map", &Viewer::load_environment_map )
     .def("spotlight_with_idx", &Viewer::spotlight_with_idx )
     .def("gbuffer_mat_with_name", &Viewer::gbuffer_mat_with_name )
+    .def("rendered_mat_no_gui", &Viewer::rendered_mat_no_gui )
+    .def("rendered_mat_with_gui", &Viewer::rendered_mat_with_gui )
+    .def("upload_single_mesh_to_gpu", &Viewer::upload_single_mesh_to_gpu )
     .def_readwrite("m_kernel_radius", &Viewer::m_kernel_radius )
     .def_readwrite("m_enable_culling", &Viewer::m_enable_culling )
     .def_readwrite("m_enable_edl_lighting", &Viewer::m_enable_edl_lighting )
@@ -365,6 +378,7 @@ PYBIND11_MODULE(easypbr, m) {
     .def_readwrite("m_far", &Camera::m_far )
     .def_readwrite("m_fov", &Camera::m_fov )
     .def_readwrite("m_model_matrix", &Camera::m_model_matrix )
+    .def_readwrite("m_use_fixed_proj_matrix", &Camera::m_use_fixed_proj_matrix )
     ;
 
     //Spotlight
@@ -428,6 +442,7 @@ PYBIND11_MODULE(easypbr, m) {
     .def_readwrite("m_solid_color", &VisOptions::m_solid_color)
     .def_readwrite("m_metalness", &VisOptions::m_metalness)
     .def_readwrite("m_roughness", &VisOptions::m_roughness)
+    .def_readwrite("m_use_custom_shader", &VisOptions::m_use_custom_shader)
     .def("set_color_solid", &VisOptions::set_color_solid )
     .def("set_color_pervertcolor", &VisOptions::set_color_pervertcolor )
     .def("set_color_texture", &VisOptions::set_color_texture )
@@ -437,6 +452,7 @@ PYBIND11_MODULE(easypbr, m) {
     .def("set_color_height", &VisOptions::set_color_height )
     .def("set_color_intensity", &VisOptions::set_color_intensity )
     .def("set_color_uv", &VisOptions::set_color_uv )
+    .def("set_color_normalvector_viewcoords", &VisOptions::set_color_normalvector_viewcoords )
     ;
 
 
@@ -458,12 +474,15 @@ PYBIND11_MODULE(easypbr, m) {
     .def("create_box", &Mesh::create_box )
     .def("create_floor", &Mesh::create_floor )
     .def("create_sphere", &Mesh::create_sphere )
+    .def("create_cylinder", &Mesh::create_cylinder )
     .def("has_extra_field", &Mesh::has_extra_field )
     .def("add_extra_field", &Mesh::add_extra_field<int> )
     .def("add_extra_field", &Mesh::add_extra_field<float> )
     .def("add_extra_field", &Mesh::add_extra_field<double> )
     .def("add_extra_field", &Mesh::add_extra_field<std::string> )
     .def("add_extra_field", &Mesh::add_extra_field<cv::Mat> )
+    .def("add_extra_field", &Mesh::add_extra_field<Eigen::MatrixXi> )
+    .def("add_extra_field", &Mesh::add_extra_field<Eigen::MatrixXf> )
     .def("add_extra_field", &Mesh::add_extra_field<Eigen::MatrixXd> )
     .def("get_extra_field_int", &Mesh::get_extra_field<int> )
     .def("get_extra_field_float", &Mesh::get_extra_field<float> )
@@ -499,6 +518,7 @@ PYBIND11_MODULE(easypbr, m) {
     .def_readwrite("m_label_mngr", &Mesh::m_label_mngr )
     .def_readwrite("m_min_max_y_for_plotting", &Mesh::m_min_max_y_for_plotting )
     .def_readwrite("m_disk_path", &Mesh::m_disk_path)
+    .def_readwrite("custom_render_func", &Mesh::custom_render_func)
     // .def("model_matrix_d", [](const Mesh &m) {
     //         return m.m_model_matrix;
     //     }
@@ -517,6 +537,7 @@ PYBIND11_MODULE(easypbr, m) {
     .def("set_model_matrix_from_string", &Mesh::set_model_matrix_from_string )
     .def("get_scale", &Mesh::get_scale )
     .def("color_solid2pervert", &Mesh::color_solid2pervert )
+    .def("color_from_mat", &Mesh::color_from_mat )
     .def("translate_model_matrix", &Mesh::translate_model_matrix )
     .def("transform_vertices_cpu", &Mesh::transform_vertices_cpu )
     // .def("rotate_model_matrix", &Mesh::rotate_model_matrix )
@@ -531,8 +552,11 @@ PYBIND11_MODULE(easypbr, m) {
     .def("flip_normals", &Mesh::flip_normals )
     .def("decimate", &Mesh::decimate )
     .def("upsample", &Mesh::upsample )
+    .def("to_3D", &Mesh::to_3D )
+    .def("to_2D", &Mesh::to_2D )
     .def("remove_vertices_at_zero", &Mesh::remove_vertices_at_zero )
     .def("remove_duplicate_vertices", &Mesh::remove_duplicate_vertices )
+    .def("undo_remove_duplicate_vertices", &Mesh::undo_remove_duplicate_vertices )
     .def("compute_tangents", &Mesh::compute_tangents, py::arg("tangent_length") = 1.0)
     .def("estimate_normals_from_neighbourhood", &Mesh::estimate_normals_from_neighbourhood )
     .def("compute_distance_to_mesh", &Mesh::compute_distance_to_mesh )
@@ -567,6 +591,9 @@ PYBIND11_MODULE(easypbr, m) {
     // .def(py::init<>())
     .def("record", py::overload_cast<const std::string, const std::string >(&Recorder::record) )
     .def("snapshot", py::overload_cast<const std::string, const std::string >(&Recorder::snapshot) )
+    .def("write_without_buffering", &Recorder::write_without_buffering )
+    .def("is_finished", &Recorder::is_finished )
+    .def("nr_images_recorded", &Recorder::nr_images_recorded )
     ;
 
     //Profiler
