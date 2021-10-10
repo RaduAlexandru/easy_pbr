@@ -393,7 +393,7 @@ PYBIND11_MODULE(easypbr, m) {
     py::class_<Scene> (m, "Scene")
     .def(py::init<>())
     // .def_static("show",  py::overload_cast<const Mesh&, const std::string>(&Scene::show) )
-    .def_static("show",  py::overload_cast<const std::shared_ptr<Mesh>, const std::string>(&Scene::show) )
+    .def_static("show",  py::overload_cast<const std::shared_ptr<Mesh>, const std::string, const bool>(&Scene::show) )
     .def_static("hide_all",  &Scene::hide_all )
     .def_static("show_all",  &Scene::show_all )
     .def_static("get_mesh_with_idx",  &Scene::get_mesh_with_idx )

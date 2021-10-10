@@ -14,7 +14,7 @@ class Scene{
 
 public:
     Scene();
-    static void show(const std::shared_ptr<Mesh> mesh, const std::string name); //adds to the scene and overwrites if it has the same name
+    static void show(const std::shared_ptr<Mesh> mesh, const std::string name, const bool overwrite_vis = false ); //adds to the scene and overwrites if it has the same name
     static void hide_all();
     static void show_all();
     // static void show(const Mesh& mesh, const std::string name); //convenience function. adds to the scene and overwrites if it has the same name

@@ -21,7 +21,7 @@ Scene::Scene()
 
 }
 
-void Scene::show(const std::shared_ptr<Mesh> mesh, const std::string name){
+void Scene::show(const std::shared_ptr<Mesh> mesh, const std::string name, const bool overwrite_vis){
 
     std::lock_guard<std::mutex> lock(m_mesh_mutex);  // so that accesed to the map are thread safe
 
@@ -41,8 +41,11 @@ void Scene::show(const std::shared_ptr<Mesh> mesh, const std::string name){
     }
 
     if(found){
+        auto tmp = m_meshes[idx_found];
         m_meshes[idx_found]=mesh; //it's a shared ptr so it just gets asigned to this one and the previous one dissapears
         m_meshes[idx_found]->name=name;
+        if ( overwrite_vis )
+            m_meshes[idx_found]->m_vis = tmp->m_vis;
         // m_meshes[idx_found]->recalculate_normals();
     }else{
         m_meshes.push_back(mesh);
