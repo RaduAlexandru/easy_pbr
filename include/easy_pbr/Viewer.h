@@ -38,7 +38,7 @@ BETTER_ENUM(ToneMapType, int, Linear = 0, Reinhardt, Unreal, FilmicALU, ACES)
 
 
 
-class GLFWwindow;
+struct GLFWwindow;
 
 namespace radu { namespace utils {
     class RandGenerator;

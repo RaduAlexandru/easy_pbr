@@ -217,7 +217,7 @@ void Scene::remove_meshes_starting_with_name(const std::string name_prefix){
 
     for(size_t i=0; i<m_meshes.size(); i++){
         // VLOG(1) << "checking mesh with name " << m_meshes[i]->name;
-        if(! m_meshes[i]->name.find(name_prefix, 0) == 0){
+        if( m_meshes[i]->name.find(name_prefix, 0) != 0){
             // VLOG(1) << "Keeping mesh " << m_meshes[i]->name;
             //mesh does not have the prefix, we keep it
             meshes_filtered.push_back(m_meshes[i]);

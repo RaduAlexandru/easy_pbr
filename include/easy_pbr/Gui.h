@@ -23,8 +23,8 @@
 #include "Texture2D.h"
 
 
-class GLFWwindow;
-class ImGuiContext;
+struct GLFWwindow;
+struct ImGuiContext;
 
 namespace easy_pbr{
 
