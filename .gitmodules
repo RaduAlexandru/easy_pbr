@@ -46,3 +46,6 @@
 [submodule "deps/easy_pytorch"]
 	path = deps/easy_pytorch
 	url = git@github.com:RaduAlexandru/EasyPytorch.git
+[submodule "deps/implot"]
+	path = deps/implot
+	url = https://github.com/epezent/implot.git

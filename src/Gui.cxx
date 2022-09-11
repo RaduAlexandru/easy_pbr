@@ -5,8 +5,8 @@
 // Include glfw3.h after our OpenGL definitions
 #include <GLFW/glfw3.h>
 #include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_opengl3.h"
 #include "imgui_ext/IconsFontAwesome.h"
 #include "imgui_ext/ImGuiUtils.h"
 #include "imgui_ext/curve.hpp"
@@ -642,7 +642,7 @@ void Gui::draw_main_menu(){
 
             for(int i=0; i<Scene::nr_meshes(); i++){
                 MeshSharedPtr mesh=m_view->m_scene->get_mesh_with_idx(i);
-                if(mesh->name!="grid_floor"){
+                if(mesh->name!="grid_floor" && mesh->m_vis.m_is_visible ){
                     mesh->transform_vertices_cpu(mesh->model_matrix());
                     mesh->set_model_matrix( Eigen::Affine3d::Identity() );
                     mesh_merged->add(*mesh);
@@ -1886,7 +1886,7 @@ void Gui::init_style() {
     style->Colors[ImGuiCol_Text] = ImVec4(0.80f, 0.80f, 0.83f, 1.00f);
     style->Colors[ImGuiCol_TextDisabled] = ImVec4(0.24f, 0.23f, 0.29f, 1.00f);
     style->Colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.05f, 0.07f, 0.85f);
-    style->Colors[ImGuiCol_ChildWindowBg] = ImVec4(0.07f, 0.07f, 0.09f, 1.00f);
+    style->Colors[ImGuiCol_ChildBg] = ImVec4(0.07f, 0.07f, 0.09f, 1.00f);
     style->Colors[ImGuiCol_PopupBg] = ImVec4(0.07f, 0.07f, 0.09f, 1.00f);
     style->Colors[ImGuiCol_Border] = ImVec4(0.80f, 0.80f, 0.83f, 0.0f);
     style->Colors[ImGuiCol_BorderShadow] = ImVec4(0.92f, 0.91f, 0.88f, 0.00f);
@@ -1925,7 +1925,7 @@ void Gui::init_style() {
     style->Colors[ImGuiCol_PlotHistogram] = ImVec4(0.63f, 0.6f, 0.6f, 0.94f);
     style->Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(0.25f, 1.00f, 0.00f, 1.00f);
     style->Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.25f, 1.00f, 0.00f, 0.43f);
-    style->Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(1.00f, 0.98f, 0.95f, 0.73f);
+    style->Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(1.00f, 0.98f, 0.95f, 0.73f);
 }
 
 } //namespace easy_pbr

@@ -7,7 +7,8 @@ project(easypbr)
 ###   VARIABLES   ##############################################################
 set(CMAKE_BUILD_TYPE RelWithDebInfo)
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O3 -Wno-reorder -march=native") #we need c++17 because this solves alignment issues with eigen http://eigen.tuxfamily.org/bz/show_bug.cgi?id=1409
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -O2 -Wno-reorder " ) # -fsanitize=address -fstack-protector -static-libasan") # -march=native -fsanitize=address -fstack-protector-all -static-libasan") #we need c++17 because this solves alignment issues with eigen http://eigen.tuxfamily.org/bz/show_bug.cgi?id=1409
+set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 set(CMAKE_CXX_STANDARD 17) #we need c++17 because this solves alignment issues with eigen http://eigen.tuxfamily.org/bz/show_bug.cgi?id=1409
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -22,6 +23,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # option(CORE_WITH_GLM "With GLM for some quality of life functions in EasyGL" OFF)
 # option(CORE_WITH_DIR_WATCHER "Compile with the dir_watcher dependency from emildb" OFF)
 option(EASYPBR_WITH_PCL "Compile with PCL" OFF)
+option(EASYPBR_WITH_PYBIND "Compile with Pybind" OFF)
 
 
 # libigl
@@ -62,7 +64,9 @@ if(EASYPBR_WITH_PCL)
 endif()
 find_package(kqueue)
 add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLAD ) #Imgui will use glad loader
-add_subdirectory(${PROJECT_SOURCE_DIR}/deps/pybind11)
+if(EASYPBR_WITH_PYBIND)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/deps/pybind11)
+endif()
 #try to compile with pytorch if you can
 set(PYTORCH_PATH "/opt/pytorch")
 set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ";${PYTORCH_PATH};")
@@ -86,7 +90,12 @@ set(MY_SRC
     ${PROJECT_SOURCE_DIR}/src/LabelMngr.cxx
     ${PROJECT_SOURCE_DIR}/src/Frame.cxx
 )
-file(GLOB IMGUI_SRC ${PROJECT_SOURCE_DIR}/deps/imgui/*.c* ${PROJECT_SOURCE_DIR}/deps/imgui/examples/imgui_impl_glfw.cpp ${PROJECT_SOURCE_DIR}/deps/imgui/examples/imgui_impl_opengl3.cpp ${PROJECT_SOURCE_DIR}/deps/imguizmo/ImGuizmo.cpp
+file(GLOB IMGUI_SRC
+     ${PROJECT_SOURCE_DIR}/deps/imgui/*.c*
+     ${PROJECT_SOURCE_DIR}/deps/implot/*.c*
+     ${PROJECT_SOURCE_DIR}/deps/imgui/backends/imgui_impl_glfw.cpp
+     ${PROJECT_SOURCE_DIR}/deps/imgui/backends/imgui_impl_opengl3.cpp
+     ${PROJECT_SOURCE_DIR}/deps/imguizmo/ImGuizmo.cpp
 )
 #tinyply because libigl readPLY has a memory leak
 set(DEPS_SRC ${DEPS_SRC} ${PROJECT_SOURCE_DIR}/deps/tiny_ply/source/tinyply.cpp)
@@ -109,6 +118,7 @@ set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include
                         ${PROJECT_SOURCE_DIR}/deps/imgui
                         ${PROJECT_SOURCE_DIR}/deps/imgui_ext
                         ${PROJECT_SOURCE_DIR}/deps/imgui/examples/
+                        ${PROJECT_SOURCE_DIR}/deps/implot
                         ${PROJECT_SOURCE_DIR}/deps/loguru
                         ${PROJECT_SOURCE_DIR}/deps/configuru
                         ${PROJECT_SOURCE_DIR}/deps/easy_gl
@@ -118,12 +128,15 @@ set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include
                         ${PROJECT_SOURCE_DIR}/deps/better_enums
                         ${PROJECT_SOURCE_DIR}/deps/imguizmo
                         ${PROJECT_SOURCE_DIR}/deps/concurrent_queue
-                        ${PROJECT_SOURCE_DIR}/deps/pybind11/include
                         ${PROJECT_SOURCE_DIR}/deps/tiny_ply/source
                         ${PROJECT_SOURCE_DIR}/deps/tiny_obj
                         ${PROJECT_SOURCE_DIR}/deps/utils/include
                         ${PROJECT_SOURCE_DIR}/deps/nanoflann/include
                         ) # Header folder
+if(EASYPBR_WITH_PYBIND)
+  set(PROJECT_INCLUDE_DIR ${PROJECT_INCLUDE_DIR} ${PROJECT_SOURCE_DIR}/deps/pybind11/include )
+endif()
+
 target_include_directories(easypbr_cpp PUBLIC ${PROJECT_INCLUDE_DIR} )
 target_include_directories(easypbr_cpp PUBLIC ${GLFW_INCLUDE_DIR})
 include_directories(${Boost_INCLUDE_DIR})
@@ -145,8 +158,9 @@ endif()
 
 
 ##pybind
-pybind11_add_module(easypbr ${PROJECT_SOURCE_DIR}/src/PyBridge.cxx )
-
+if(EASYPBR_WITH_PYBIND)
+  pybind11_add_module(easypbr ${PROJECT_SOURCE_DIR}/src/PyBridge.cxx )
+endif()
 
 ###   EXECUTABLE   #######################################
 add_executable(run_easypbr ${PROJECT_SOURCE_DIR}/src/main.cxx  )
@@ -208,5 +222,7 @@ endif()
 
 
 target_link_libraries(easypbr_cpp PUBLIC ${LIBS} )
-target_link_libraries(easypbr PRIVATE easypbr_cpp)
+if(EASYPBR_WITH_PYBIND)
+  target_link_libraries(easypbr PRIVATE easypbr_cpp)
+endif()
 target_link_libraries(run_easypbr PRIVATE easypbr_cpp )
