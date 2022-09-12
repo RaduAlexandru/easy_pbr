@@ -70,8 +70,8 @@ Gui::Gui( const std::string config_file,
          ) :
         m_draw_main_menu(true),
         m_show_demo_window(false),
-        m_show_profiler_window(true),
-        m_show_player_window(true),
+        m_show_profiler_window(false),
+        m_show_player_window(false),
         m_selected_mesh_idx(0),
         m_selected_spot_light_idx(0),
         m_selected_trajectory_idx(0),
@@ -730,7 +730,7 @@ void Gui::draw_main_menu(){
             ImGui::ListBoxFooter();
         }
 
-
+        ImGui::Checkbox("Ortho", &m_view->m_camera->m_use_ortho_projection);
         ImGui::SliderFloat("FOV", &m_view->m_camera->m_fov, 30.0, 120.0);
         ImGui::SliderFloat("near", &m_view->m_camera->m_near, 0.01, 10.0);
         ImGui::SliderFloat("far", &m_view->m_camera->m_far, 100.0, 5000.0);

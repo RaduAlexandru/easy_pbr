@@ -26,11 +26,13 @@ Camera::Camera():
     m_fov(30.0),
     m_near(0.01),
     m_far(5000),
+    m_ortho_scale(1.0),
     m_is_mouse_down(false),
     m_prev_mouse_pos_valid(false),
     m_is_initialized(false),
     m_position_initialized(false),
     m_lookat_initialized(false),
+    m_use_ortho_projection(false),
     m_use_fixed_proj_matrix(false),
     m_rand_gen(new RandGenerator())
 {
@@ -61,7 +63,12 @@ Eigen::Matrix4f Camera::proj_matrix(const Eigen::Vector2f viewport_size){
     if (m_use_fixed_proj_matrix){
         return m_fixed_proj_matrix;
     }else{
-        return compute_projection_matrix(m_fov, aspect, m_near, m_far);
+        if ( m_use_ortho_projection )
+        {
+            return compute_ortho_projection_matrix(-viewport_size.x()/2, viewport_size.x()/2,-viewport_size.y()/2.,viewport_size.y()/2, m_near, m_far);
+        }
+        else
+            return compute_projection_matrix(m_fov, aspect, m_near, m_far);
     }
 }
 Eigen::Matrix4f Camera::proj_matrix(const float viewport_width, const float viewport_height){
@@ -328,6 +335,30 @@ Eigen::Matrix4f Camera::compute_projection_matrix(const float fov_x, const float
     return P;
 }
 
+Eigen::Matrix4f Camera::compute_ortho_projection_matrix(const float left, const float right, const float bottom, const float top, const float znear, const float zfar){
+    //https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/glOrtho.xml
+
+    Eigen::Matrix4f P;
+    P.setConstant(0.0);
+
+    const double drl = m_ortho_scale*(right-left);
+    const double prl = m_ortho_scale*(right+left);
+    const double dtb = m_ortho_scale*(top-bottom);
+    const double ptb = m_ortho_scale*(top+bottom);
+    const double dz = zfar-znear;
+    const double pz = zfar+znear;
+
+    P(0,0)=2./drl;
+    P(1,1)=2./dtb;
+    P(2,2)=-2./dz;
+    P(0,3)=-prl/drl;
+    P(1,3)=-ptb/dtb;
+    P(2,3)=-pz/dz;
+    P(3,3)=1;
+    //LOG(1) << "P: " << P;
+    return P;
+}
+
 void Camera::recalculate_orientation(){
     Eigen::Matrix3f cam_axes;
 
@@ -434,7 +465,10 @@ void Camera::mouse_scroll(const float x, const float y){
     }else{
       val=0.9;
     }
-    push_away(val);
+    if ( m_use_ortho_projection )
+        m_ortho_scale = std::min(1.0,std::max(m_ortho_scale*val,1e-10));
+    else
+        push_away(val);
 }
 
 Eigen::Vector3f Camera::project(const Eigen::Vector3f point_world, const Eigen::Matrix4f view, const Eigen::Matrix4f proj, const Eigen::Vector2f viewport){

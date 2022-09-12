@@ -95,11 +95,13 @@ public:
     float m_fov; //fov in the x direction
     float m_near;
     float m_far;
+    double m_ortho_scale = 1;
     bool m_is_initialized; //the camera start in a somewhat default position. Initializing it means putting the camera in position in which you see the scene. This can be done with from_string or can be done by the viewer automatically when the first update is done. If you used from_string then the viewer doesnt need to do anything
     bool m_position_initialized; //signales if the position was initialized already by the user(true) or is not initialized to anything meaningful and should be set automatically
     bool m_lookat_initialized; //signales if the lookat was initialized already by the user(true) or is not initialized to anything meaningful and should be set automatically
     bool m_use_fixed_proj_matrix;
     Eigen::Matrix4f m_fixed_proj_matrix;
+    bool m_use_ortho_projection;
 
     Trajectory m_traj;
     std::shared_ptr<Camera> clone();
@@ -120,9 +122,9 @@ private:
     bool m_prev_mouse_pos_valid;
     std::shared_ptr<radu::utils::RandGenerator> m_rand_gen;
 
-
     void recalculate_orientation();
     Eigen::Matrix4f compute_projection_matrix(const float fov_x, const float aspect, const float znear, const float zfar);
+    Eigen::Matrix4f compute_ortho_projection_matrix(const float left, const float right, const float bottom, const float top, const float znear, const float zfar);
     Eigen::Quaternionf two_axis_rotation(const Eigen::Vector2f viewport_size, const float speed, const Eigen::Vector2f prev_mouse, const Eigen::Vector2f current_mouse);
 };
 

@@ -92,7 +92,6 @@ set(MY_SRC
 )
 file(GLOB IMGUI_SRC
      ${PROJECT_SOURCE_DIR}/deps/imgui/*.c*
-     ${PROJECT_SOURCE_DIR}/deps/implot/*.c*
      ${PROJECT_SOURCE_DIR}/deps/imgui/backends/imgui_impl_glfw.cpp
      ${PROJECT_SOURCE_DIR}/deps/imgui/backends/imgui_impl_opengl3.cpp
      ${PROJECT_SOURCE_DIR}/deps/imguizmo/ImGuizmo.cpp
@@ -118,7 +117,6 @@ set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include
                         ${PROJECT_SOURCE_DIR}/deps/imgui
                         ${PROJECT_SOURCE_DIR}/deps/imgui_ext
                         ${PROJECT_SOURCE_DIR}/deps/imgui/examples/
-                        ${PROJECT_SOURCE_DIR}/deps/implot
                         ${PROJECT_SOURCE_DIR}/deps/loguru
                         ${PROJECT_SOURCE_DIR}/deps/configuru
                         ${PROJECT_SOURCE_DIR}/deps/easy_gl
