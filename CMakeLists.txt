@@ -107,7 +107,7 @@ endif()
 
 
 ###   MAIN LIB  ####################
-add_library( easypbr_cpp SHARED ${MY_SRC} extern/glad/glad.c ${DEPS_SRC}  ${IMGUI_SRC}  )
+add_library( easypbr_cpp ${MY_SRC} extern/glad/glad.c ${DEPS_SRC}  ${IMGUI_SRC}  )
 
 
 ###   INCLUDES   #########################################################
