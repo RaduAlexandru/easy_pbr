@@ -5,7 +5,9 @@
 #include <unordered_map>
 #include <memory>
 
-#include <configuru.hpp>
+//#include <configuru.hpp>
+#include "loguru_fwd_dec.h"
+#include "configuru_fwd_dec.h"
 
 //OpenCV
 #include <opencv2/highgui/highgui.hpp>

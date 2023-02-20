@@ -5,6 +5,7 @@
 #include <thread>
 #include <memory>
 #include <unordered_map>
+#include "loguru_fwd_dec.h"
 #include "GBuffer.h"
 
 #include "concurrentqueue.h"

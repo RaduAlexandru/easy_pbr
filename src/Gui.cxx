@@ -50,9 +50,10 @@ using namespace radu::utils;
 
 
 //configuru
-#define CONFIGURU_WITH_EIGEN 1
-#define CONFIGURU_IMPLICIT_CONVERSIONS 1
-#include <configuru.hpp>
+//#define CONFIGURU_IMPLEMENTATION
+//#define CONFIGURU_WITH_EIGEN 1
+//#define CONFIGURU_IMPLICIT_CONVERSIONS 1
+#include "easy_pbr/configuru_fwd_dec.h"
 using namespace configuru;
 
 

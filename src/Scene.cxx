@@ -3,8 +3,7 @@
 //c++
 
 //my stuff
-#define LOGURU_REPLACE_GLOG 1
-#include <loguru.hpp>
+#include "easy_pbr/loguru_fwd_dec.h"
 
 
 namespace easy_pbr{

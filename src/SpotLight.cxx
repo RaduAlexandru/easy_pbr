@@ -1,8 +1,7 @@
 #include "easy_pbr/SpotLight.h"
 
 //loguru
-#define LOGURU_REPLACE_GLOG 1
-#include <loguru.hpp>
+#include "easy_pbr/loguru_fwd_dec.h"
 
 
 #include "easy_pbr/MeshGL.h"

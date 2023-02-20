@@ -3,13 +3,7 @@
 #include <memory>
 #include<stdarg.h>
 
-
-
-//loguru
-#define LOGURU_WITH_STREAMS 1
-#define LOGURU_REPLACE_GLOG 1
-#include <loguru.hpp>
-
+#include "loguru_fwd_dec.h"
 
 #include "Buf.h"
 #include "Texture2D.h"

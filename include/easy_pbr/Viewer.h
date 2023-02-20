@@ -11,7 +11,7 @@
 // #include <GLFW/glfw3.h>
 
 #include <Eigen/Geometry>
-
+#include "loguru_fwd_dec.h"
 #include "Shader.h"
 #include "GBuffer.h"
 #include "CubeMap.h"

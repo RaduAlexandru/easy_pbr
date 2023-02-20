@@ -1,9 +1,11 @@
 #include "easy_pbr/LabelMngr.h"
 
+#include "easy_pbr/loguru_fwd_dec.h"
+
 //configuru
-#define CONFIGURU_WITH_EIGEN 1
-#define CONFIGURU_IMPLICIT_CONVERSIONS 1
-#include <configuru.hpp>
+//#define CONFIGURU_WITH_EIGEN 1
+//#define CONFIGURU_IMPLICIT_CONVERSIONS 1
+#include "easy_pbr/configuru_fwd_dec.h"
 using namespace configuru;
 
 //my stuff
@@ -14,8 +16,8 @@ using namespace configuru;
 #include <fstream>
 
 //loguru
-#define LOGURU_REPLACE_GLOG 1
-#include <loguru.hpp>
+//#define LOGURU_REPLACE_GLOG 1
+//#include <loguru.hpp>
 
 using namespace radu::utils;
 

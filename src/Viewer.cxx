@@ -13,10 +13,13 @@
 
 //loguru
 #define LOGURU_IMPLEMENTATION 1
-#define LOGURU_NO_DATE_TIME 1
-#define LOGURU_NO_UPTIME 1
-#define LOGURU_REPLACE_GLOG 1
-#include <loguru.hpp>
+//#define LOGURU_NO_DATE_TIME 1
+//#define LOGURU_NO_UPTIME 1
+//#define LOGURU_REPLACE_GLOG 1
+//#include <loguru.hpp>
+#include "easy_pbr/loguru_fwd_dec.h"
+#define CONFIGURU_IMPLEMENTATION 1
+#include "easy_pbr/configuru_fwd_dec.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h> //glfw3.h after our OpenGL definitions
@@ -42,10 +45,6 @@
 
 
 //configuru
-#define CONFIGURU_IMPLEMENTATION 1
-#define CONFIGURU_WITH_EIGEN 1
-#define CONFIGURU_IMPLICIT_CONVERSIONS 1
-#include <configuru.hpp>
 using namespace configuru;
 
 //boost

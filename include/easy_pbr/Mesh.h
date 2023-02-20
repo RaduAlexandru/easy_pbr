@@ -14,7 +14,7 @@
 //better enums
 #include <enum.h>
 
-#include <loguru.hpp>
+#include "loguru_fwd_dec.h"
 
 
 namespace radu { namespace utils {

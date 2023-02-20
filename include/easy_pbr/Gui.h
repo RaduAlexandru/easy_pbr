@@ -9,7 +9,7 @@
 // #include <glad/glad.h> // Initialize with gladLoadGL()
 // Include glfw3.h after our OpenGL definitions
 // #include <GLFW/glfw3.h>
-
+#include "loguru_fwd_dec.h"
 // //imgui
 #include <imgui.h> //is needed to be included here because imguizmo needs it
 // #include "imgui_impl_glfw.h"
