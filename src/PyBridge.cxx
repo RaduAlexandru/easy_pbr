@@ -1,9 +1,9 @@
 #include "easy_pbr/PyBridge.h"
 
 #ifdef EASYPBR_WITH_TORCH
-    #include <torch/extension.h>
     #include "torch/torch.h"
-    #include "torch/csrc/utils/pybind.h"
+    #include <torch/extension.h>
+    // #include "torch/csrc/utils/pybind.h"
 
     #include "UtilsPytorch.h"
 #endif
