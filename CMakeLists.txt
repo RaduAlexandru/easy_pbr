@@ -84,6 +84,19 @@ if(TorchPath STREQUAL "")
 else()
     list(APPEND CMAKE_PREFIX_PATH ${TorchPath})
     find_package(Torch)
+    #check that the CXX_ABI matches because otherwise we will have a ton of linking errors https://github.com/pytorch/pytorch/issues/51039
+    execute_process( 
+        COMMAND python -c "import torch; print(torch._C._GLIBCXX_USE_CXX11_ABI)"
+        OUTPUT_VARIABLE TORCH_USES_CXX11_ABI
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_STRIP_TRAILING_WHITESPACE
+    )
+    message("TORCH_USES_CXX11_ABI: " ${TORCH_USES_CXX11_ABI})
+    if(TORCH_USES_CXX11_ABI STREQUAL "True")
+        #all good
+    else()
+        message( FATAL_ERROR "Torch was compiled with CXX11_ABI=0. This means it cannot be linked with the other libraries that EasyPBR uses. The best would be to compile PyTorch from source. For more detail see https://github.com/pytorch/pytorch/issues/51039" )
+    endif()
 endif()
 # set(TORCH_FOUND False)
 
