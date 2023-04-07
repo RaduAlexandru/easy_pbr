@@ -259,6 +259,7 @@ PYBIND11_MODULE(easypbr, m) {
     .def("channels", &cv::Mat::channels )
     .def("empty", &cv::Mat::empty )
     .def("to_cv8u", [](cv::Mat &m) {  cv::Mat out; m.convertTo(out, CV_8U, 255, 0);  m=out; return out;  } )
+    .def("to_cv32f", [](cv::Mat &m) {  cv::Mat out; m.convertTo(out, CV_32F, 1.0/255.0);  m=out; return out;  } )
     .def("blend", [](cv::Mat &cur, cv::Mat &src2, float alpha ) { cv::Mat dst; cv::addWeighted( cur, alpha, src2, 1-alpha, 0.0, dst);  return dst;   } )
     .def("hconcat", [](cv::Mat &cur, cv::Mat &src1 ) { cv::Mat dst; cv::hconcat(cur,src1,dst);  return dst;   } )
     .def("vconcat", [](cv::Mat &cur, cv::Mat &src1 ) { cv::Mat dst; cv::vconcat(cur,src1,dst);  return dst;   } )
