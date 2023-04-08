@@ -1160,7 +1160,9 @@ bool Mesh::load_from_file(const std::string file_path){
     //https://learnopengl.com/Advanced-Lighting/Normal-Mapping
     //if we have texture coordinates and normal vectors, we will be able to load a normal map from file and therefore we will need the TBN matrix.
     //we precompute here the tangent vector and leave the bitangent in the vertex shader
-    recalculate_normals();
+    if(!NV.size()){
+        recalculate_normals();
+    }
     if(NV.size()&&UV.size()){
         compute_tangents(); //
     }

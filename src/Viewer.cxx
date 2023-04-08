@@ -544,7 +544,10 @@ void Viewer::init_opengl(){
 
     //we compose the gbuffer into this fbo, together with a bloom texture for storing the birght areas
     m_composed_fbo.set_size(m_gbuffer.width(), m_gbuffer.height() ); //established what will be the size of the textures attached to this framebuffer
-    m_composed_fbo.add_texture("composed_gtex", GL_RGBA16F, GL_RGBA, GL_HALF_FLOAT);
+    // m_composed_fbo.add_texture("composed_gtex", GL_RGBA16F, GL_RGBA, GL_HALF_FLOAT);
+    //we divide between diffuse and specular because it enables to apply subsurface scattering to the diffuse part
+    m_composed_fbo.add_texture("composed_diffuse_gtex", GL_RGBA16F, GL_RGBA, GL_HALF_FLOAT);
+    m_composed_fbo.add_texture("composed_specular_gtex", GL_RGBA16F, GL_RGBA, GL_HALF_FLOAT);
     m_composed_fbo.add_texture("bloom_gtex", GL_RGBA16F, GL_RGBA, GL_HALF_FLOAT);
     m_composed_fbo.sanity_check();
 
@@ -2125,7 +2128,9 @@ void Viewer::compose_final_image(const GLuint fbo_id){
     m_compose_final_quad_shader.draw_into(m_composed_fbo,
                                     {
                                     // std::make_pair("position_out", "position_gtex"),
-                                    std::make_pair("out_color", "composed_gtex"),
+                                    // std::make_pair("out_color", "composed_gtex"),
+                                    std::make_pair("out_diffuse", "composed_diffuse_gtex"),
+                                    std::make_pair("out_specular", "composed_specular_gtex"),
                                     std::make_pair("bloom_color", "bloom_gtex"),
                                     }
                                     );
@@ -2349,7 +2354,9 @@ void Viewer::apply_postprocess(){
 
 
 
-    m_apply_postprocess_shader.bind_texture(m_composed_fbo.tex_with_name("composed_gtex"),"composed_tex");
+    // m_apply_postprocess_shader.bind_texture(m_composed_fbo.tex_with_name("composed_gtex"),"composed_tex");
+    m_apply_postprocess_shader.bind_texture(m_composed_fbo.tex_with_name("composed_diffuse_gtex"),"composed_diffuse_tex");
+    m_apply_postprocess_shader.bind_texture(m_composed_fbo.tex_with_name("composed_specular_gtex"),"composed_specular_tex");
     m_apply_postprocess_shader.bind_texture(m_composed_fbo.tex_with_name("bloom_gtex"),"bloom_tex");
     m_apply_postprocess_shader.bind_texture(m_gbuffer.tex_with_name("depth_gtex"), "depth_tex");
     m_apply_postprocess_shader.bind_texture(m_gbuffer.tex_with_name("normal_gtex"),"normal_tex");

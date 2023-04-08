@@ -9,8 +9,9 @@ layout(location=2) in vec3 view_ray_in;
 layout(location=3) in vec3 world_view_ray_in;
 
 //out
-layout(location = 0) out vec4 out_color;
-layout(location = 1) out vec4 bloom_color;
+layout(location = 0) out vec4 out_diffuse;
+layout(location = 1) out vec4 out_specular;
+layout(location = 2) out vec4 bloom_color;
 
 uniform sampler2D normal_tex;
 // uniform sampler2D position_cam_coords_tex;
@@ -610,19 +611,22 @@ void main(){
 
     //PBR again========= https://github.com/JoeyDeVries/LearnOpenGL/blob/master/src/6.pbr/1.1.lighting/1.1.pbr.fs
     float depth=texture(depth_tex, uv_in).x;
-    vec3 color=vec3(0);
+    vec3 color_diffuse=vec3(0);
+    vec3 color_specular=vec3(0);
     float pixel_weight=1.0;
     float shadow_factor_total=1.0;
     if(depth==1.0){
 
         // // //there is no mesh or anything covering this pixel, we discard it so the pixel will show whtever the background was set to
         if( should_show_bg() ){
-            vec3 color=get_bg_color();
-            out_color = vec4(color, 1.0);
+            vec3 color_bg=get_bg_color();
+            // out_color = vec4(color, 1.0);
+            out_diffuse = vec4(color_bg, 1.0);
+            out_specular = vec4(vec3(0), 1.0);
             if(enable_bloom){
-                float bloom_weight=compute_bloom_weight(color);
+                float bloom_weight=compute_bloom_weight(color_bg);
                 if(bloom_weight>0.0){
-                    bloom_color=vec4(color, bloom_weight);
+                    bloom_color=vec4(color_bg, bloom_weight);
                 }else{
                     bloom_color=vec4(0.0);
                 }
@@ -659,8 +663,8 @@ void main(){
 
         // //edl lighting https://github.com/potree/potree/blob/65f6eb19ce7a34ce588973c262b2c3558b0f4e60/src/materials/shaders/edl.fs
         if(enable_edl_lighting  || N==vec3(0)){ //if we have no normal we may be in a point cloud with no normals and then we can just do edl, no IBL is possible
-            color=get_edl_color(albedo, depth);
-            color=color*vec3(ao);
+            color_diffuse=get_edl_color(albedo, depth);
+            color_diffuse=color_diffuse*vec3(ao);
 
             //get also shadows if we want to
             if(edl_with_shadows){
@@ -669,7 +673,7 @@ void main(){
                 shadow_factor_total=compute_shadow_factor(P_w);
                 shadow_factor_total=smootherstep(0.0, 1.0, shadow_factor_total); //shadow factor goes from 0 when in shadow and 1 when in light, we want to make the shadow slightly brighter
                 shadow_factor_total=map(shadow_factor_total, 0.0, 1.0, 0.5, 1.0);
-                color=color*shadow_factor_total;
+                color_diffuse=color_diffuse*shadow_factor_total;
             }
         }else{
             //PBR-----------
@@ -702,7 +706,7 @@ void main(){
             // F0*=0.1;
 
             // reflectance equation
-            vec3 Lo = vec3(0.0);
+            // vec3 Lo = vec3(0.0);
             for(int i = 0; i < nr_active_spot_lights; ++i)
             {
 
@@ -829,13 +833,20 @@ void main(){
                 float NdotL = max(dot(N, L), 0.0);
 
                 // add to outgoing radiance Lo
-                Lo += (kD * albedo / PI + specular) * radiance * NdotL * shadow_factor;  // note that we already multiplied the BRDF by the Fresnel (kS) so we won't multiply by kS again
+                // Lo += (kD * albedo / PI + specular) * radiance * NdotL * shadow_factor;  // note that we already multiplied the BRDF by the Fresnel (kS) so we won't multiply by kS again
                 // Lo += (kD * albedo / PI + specular) * radiance * NdotL;  // note that we already multiplied the BRDF by the Fresnel (kS) so we won't multiply by kS again
+                //specular
+                // Lo += ( specular) * radiance * NdotL * shadow_factor;
+                color_specular+=( specular) * radiance * NdotL * shadow_factor;
+                //diffuse
+                // Lo += ( kD * albedo / PI ) * radiance * NdotL * shadow_factor;
+                color_diffuse+= ( kD * albedo / PI ) * radiance * NdotL * shadow_factor;
 
             }
 
             // ambient lighting (we now use IBL as the ambient term)
-            vec3 ambient=vec3(0.0);
+            vec3 ambient_diffuse=vec3(0.0);
+            vec3 ambient_specular=vec3(0.0);
             if (enable_ibl){
                 // vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
                 // Adjust Fresnel absed on roughness.
@@ -872,18 +883,30 @@ void main(){
                 vec3 diffuse = single * (1.0 - specular - multi) + multi;
 
                 // fragColor = ao * (diffuse * irradiance + specular * radiance);
-                ambient=ao * (diffuse * irradiance + specular * radiance);
+                // ambient=ao * (diffuse * irradiance + specular * radiance);
+                // ambient=specular;
                 // ambient=(diffuse * irradiance + specular * radiance);
+                // ambient=ao * (diffuse * irradiance + specular * radiance)
+                //specular
+                // ambient=ao * (specular * radiance);
+                ambient_specular= vec3(ambient_color_power) * ao * (specular * radiance);
+                //diffuse
+                // ambient=ao * (diffuse * irradiance);
+                ambient_diffuse=  vec3(ambient_color_power) * ao * (diffuse * irradiance);
 
 
 
 
             }else{
-                ambient = vec3(ambient_color_power) * ambient_color * ao;
+                // ambient = vec3(ambient_color_power) * ambient_color * ao;
+                ambient_diffuse = vec3(ambient_color_power) * ambient_color * ao;
+                ambient_specular=vec3(0);
             }
 
 
-            color = vec3(ambient_color_power) * ambient + Lo;
+            // color = vec3(ambient_color_power) * ambient + Lo;
+            color_diffuse+=ambient_diffuse;
+            color_specular+=ambient_specular;
             
 
         }
@@ -897,6 +920,7 @@ void main(){
 
 
     if(enable_bloom){
+        vec3 color=color_diffuse+color_specular;
         float bloom_weight=compute_bloom_weight(color);
         if(bloom_weight>0.0){
             bloom_color=vec4(color, bloom_weight);
@@ -905,7 +929,9 @@ void main(){
         }
     }
 
-    out_color = vec4(color, pixel_weight);
+    // out_color = vec4(color, pixel_weight);
+    out_diffuse = vec4(color_diffuse, pixel_weight);
+    out_specular = vec4(color_specular, pixel_weight);
     // out_color = vec4(color, 1.0-shadow_factor_total);
     // out_color = vec4(vec3(shadow_factor_total), 1.0);
 

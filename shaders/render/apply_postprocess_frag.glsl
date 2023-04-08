@@ -10,7 +10,9 @@ layout(location=1) in vec2 uv_in;
 //out
 layout(location = 0) out vec4 out_color;
 
-uniform sampler2D composed_tex;
+// uniform sampler2D composed_tex;
+uniform sampler2D composed_diffuse_tex;
+uniform sampler2D composed_specular_tex;
 uniform sampler2D bloom_tex;
 uniform sampler2D depth_tex;
 uniform sampler2D normal_tex;
@@ -153,12 +155,14 @@ void main(){
     if(depth==1.0){
         pixel_covered_by_mesh=false;
         if (show_background_img || show_environment_map || show_prefiltered_environment_map){// //there is no mesh or anything covering this pixel, we either read the backgrpund or just set the pixel to the background color
-            color = texture(composed_tex, uv_in);
+            color = texture(composed_diffuse_tex, uv_in);
         }else{ //if it's not covered by a mesh we might still need to color this pixel with the bloom texture so we just accumulate on top of a color of zero
             color=vec4(0.0);
          }
     }else{ //pixel is covered by mesh so we read the color it has
-        color = texture(composed_tex, uv_in);
+        vec4 color_diffuse = texture(composed_diffuse_tex, uv_in);
+        vec4 color_specular = texture(composed_specular_tex, uv_in);
+        color=color_diffuse+color_specular;
     }
 
     if (enable_bloom){ //add the bloom from all the blurred textures
