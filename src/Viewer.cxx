@@ -173,6 +173,7 @@ bool Viewer::init_params_nongl(const std::string config_file){
     Config default_cam_cfg=default_cfg["visualization"]["cam"];
     Config default_scene_cfg=default_cfg["visualization"]["scene"];
     Config default_ssao_cfg=default_cfg["visualization"]["ssao"];
+    Config default_sss_cfg=default_cfg["visualization"]["sss"];
     Config default_bloom_cfg=default_cfg["visualization"]["bloom"];
     Config default_edl_cfg=default_cfg["visualization"]["edl"];
     Config default_bg_cfg=default_cfg["visualization"]["background"];
@@ -185,6 +186,7 @@ bool Viewer::init_params_nongl(const std::string config_file){
     Config cam_cfg=vis_cfg.get_or("cam",default_vis_cfg);
     Config scene_cfg=vis_cfg.get_or("scene",default_vis_cfg);
     Config ssao_cfg=vis_cfg.get_or("ssao",default_vis_cfg);
+    Config sss_cfg=vis_cfg.get_or("sss",default_vis_cfg);
     Config bloom_cfg=vis_cfg.get_or("bloom",default_vis_cfg);
     Config edl_cfg=vis_cfg.get_or("edl",default_vis_cfg);
     Config bg_cfg=vis_cfg.get_or("background",default_vis_cfg);
@@ -238,6 +240,10 @@ bool Viewer::init_params_nongl(const std::string config_file){
     m_sigma_spacial = ssao_cfg.get_or("ao_blur_sigma_spacial", default_ssao_cfg);
     m_sigma_depth = ssao_cfg.get_or("ao_blur_sigma_depth", default_ssao_cfg);
     m_ssao_estimate_normals_from_depth= ssao_cfg.get_or("ssao_estimate_normals_from_depth", default_ssao_cfg);
+
+    //sss
+    m_sss_width = sss_cfg.get_float_else_default_else_nan("sss_width", default_sss_cfg);
+
 
     // //bloom
     m_enable_bloom = bloom_cfg.get_or("enable_bloom", default_bloom_cfg);
@@ -523,6 +529,11 @@ void Viewer::compile_shaders(){
     m_prefilter_shader.compile(std::string(EASYPBR_SHADERS_PATH)+"/ibl/prefilter_vert.glsl", std::string(EASYPBR_SHADERS_PATH)+"/ibl/prefilter_frag.glsl");
     m_integrate_brdf_shader.compile(std::string(EASYPBR_SHADERS_PATH)+"/ibl/integrate_brdf_vert.glsl", std::string(EASYPBR_SHADERS_PATH)+"/ibl/integrate_brdf_frag.glsl");
 
+
+    //sss
+    m_subsurface_scattering_shader.compile( std::string(EASYPBR_SHADERS_PATH)+"/subsurface_scattering/sss_vert.glsl", std::string(EASYPBR_SHADERS_PATH)+"/subsurface_scattering/sss_frag.glsl"  );
+
+
     //debugging shaders
     m_decode_gbuffer_debugging.compile( std::string(EASYPBR_SHADERS_PATH)+"/debug/decode_gbuffer_vert.glsl", std::string(EASYPBR_SHADERS_PATH)+"/debug/decode_gbuffer_frag.glsl"  );
 }
@@ -533,9 +544,10 @@ void Viewer::init_opengl(){
     GL_C( m_gbuffer.add_texture("diffuse_gtex", GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE) ); //add also alpha so we can always switch a mesh to be invisible and still catch shadows, so it will have some sort of alpha based on the shadow factor
     // GL_C( m_gbuffer.add_texture("normal_gtex", GL_RG16F, GL_RG, GL_HALF_FLOAT) );  //as done by Cry Engine 3 in their presentation "A bit more deferred"  https://www.slideshare.net/guest11b095/a-bit-more-deferred-cry-engine3
     GL_C( m_gbuffer.add_texture("normal_gtex", GL_RGB8, GL_RGB, GL_UNSIGNED_BYTE) );
-    GL_C( m_gbuffer.add_texture("metalness_and_roughness_gtex", GL_RG8, GL_RG, GL_UNSIGNED_BYTE) );
+    GL_C( m_gbuffer.add_texture("metalness_and_roughness_and_sss_strength_gtex", GL_RGB8, GL_RGB, GL_UNSIGNED_BYTE) );
+    // GL_C( m_gbuffer.add_texture("needs_sss_gtex", GL_R8, GL_RED, GL_UNSIGNED_BYTE) );
     GL_C( m_gbuffer.add_texture("mesh_id_gtex", GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_INT) );
-    GL_C( m_gbuffer.add_texture("ao_gtex", GL_R8, GL_RED, GL_UNSIGNED_BYTE) ); //useful for when the mesh comes with ao either from a texture or from embree 
+    GL_C( m_gbuffer.add_texture("ao_gtex", GL_RG8, GL_RG, GL_UNSIGNED_BYTE) ); //useful for when the mesh comes with ao either from a texture or from embree
     GL_C( m_gbuffer.add_depth("depth_gtex") );
     if (m_render_uv_to_gbuffer){
         GL_C( m_gbuffer.add_texture("uv_gtex", GL_RG32F, GL_RG, GL_FLOAT) );
@@ -688,6 +700,13 @@ void Viewer::configure_auto_params(){
         if (std::isnan(m_kernel_radius) ){
             m_kernel_radius=0.05*scale;
         }
+    }
+    
+    //SSS-------
+    if(std::isnan(m_sss_width)){
+        // m_sss_width=0.00025*scale;
+        // m_sss_width=0.03*scale;
+        m_sss_width=4.0*scale;
     }
 
     //EDL--------
@@ -1117,6 +1136,20 @@ void Viewer::draw(const GLuint fbo_id){
     //compose the final image
     compose_final_image(fbo_id);
 
+    //blur the diffuse sss part in case we have any mesh that needs sss
+    bool need_to_run_sss=false;
+    for(size_t i=0; i<m_meshes_gl.size(); i++){
+        MeshGLSharedPtr mesh=m_meshes_gl[i];
+        if(mesh->m_core->m_vis.m_is_visible && !mesh->m_core->is_empty() && mesh->m_core->m_vis.m_needs_sss ){
+            need_to_run_sss=true;
+        }
+    }
+    if(need_to_run_sss){
+        subsurface_scattering_pass();
+    }
+
+
+
     //blur the bloom image if we do have it
     if (m_enable_bloom){
         blur_img(m_composed_fbo.tex_with_name("bloom_gtex"), m_bloom_start_mip_map_lvl, m_bloom_max_mip_map_lvl, m_bloom_blur_iters);
@@ -1358,7 +1391,7 @@ void Viewer::render_points_to_gbuffer(const MeshGLSharedPtr mesh){
                     {
                     std::make_pair("normal_out", "normal_gtex"),
                     std::make_pair("diffuse_out", "diffuse_gtex"),
-                    std::make_pair("metalness_and_roughness_out", "metalness_and_roughness_gtex"),
+                    std::make_pair("metalness_and_roughness_and_sss_strength_out", "metalness_and_roughness_and_sss_strength_gtex"),
                     std::make_pair("ao_out", "ao_gtex")
                     }
                     ); //makes the shaders draw into the buffers we defines in the gbuffer
@@ -1592,6 +1625,7 @@ void Viewer::render_mesh_to_gbuffer(const MeshGLSharedPtr mesh){
     m_draw_mesh_shader.uniform_float(mesh->m_core->m_vis.m_roughness , "roughness");
     m_draw_mesh_shader.uniform_float(mesh->m_core->m_vis.m_opacity , "opacity");
     m_draw_mesh_shader.uniform_int(mesh->m_core->id , "mesh_id");
+    m_draw_mesh_shader.uniform_bool(mesh->m_core->m_vis.m_needs_sss , "needs_sss");
     if(mesh->m_core->m_label_mngr){
         m_draw_mesh_shader.uniform_array_v3_float(mesh->m_core->m_label_mngr->color_scheme().cast<float>(), "color_scheme"); //for semantic labels
     }
@@ -1626,9 +1660,9 @@ void Viewer::render_mesh_to_gbuffer(const MeshGLSharedPtr mesh){
         {
         std::make_pair("normal_out", "normal_gtex"),
         std::make_pair("diffuse_out", "diffuse_gtex"),
-        std::make_pair("metalness_and_roughness_out", "metalness_and_roughness_gtex"),
+        std::make_pair("metalness_and_roughness_and_sss_strength_out", "metalness_and_roughness_and_sss_strength_gtex"),
         std::make_pair("mesh_id_out", "mesh_id_gtex"),
-        std::make_pair("ao_out", "ao_gtex")
+        std::make_pair("ao_out", "ao_gtex"),
     };
     if(m_render_uv_to_gbuffer){
         draw_list.push_back(std::make_pair("uv_out", "uv_gtex"));
@@ -1657,8 +1691,8 @@ void Viewer::render_surfels_to_gbuffer(const MeshGLSharedPtr mesh){
     if (m_gbuffer.tex_with_name("normal_gtex").internal_format()!=GL_RGB16F){
         m_gbuffer.tex_with_name("normal_gtex").allocate_storage(GL_RGB16F, GL_RGB, GL_HALF_FLOAT, m_gbuffer.width(), m_gbuffer.height() );
     }
-    if (m_gbuffer.tex_with_name("metalness_and_roughness_gtex").internal_format()!=GL_RG16F){
-        m_gbuffer.tex_with_name("metalness_and_roughness_gtex").allocate_storage(GL_RG16F, GL_RG, GL_HALF_FLOAT, m_gbuffer.width(), m_gbuffer.height() );
+    if (m_gbuffer.tex_with_name("metalness_and_roughness_and_sss_strength_gtex").internal_format()!=GL_RGB16F){
+        m_gbuffer.tex_with_name("metalness_and_roughness_and_sss_strength_gtex").allocate_storage(GL_RGB16F, GL_RGB, GL_HALF_FLOAT, m_gbuffer.width(), m_gbuffer.height() );
     }
 
 
@@ -1779,7 +1813,7 @@ void Viewer::render_surfels_to_gbuffer(const MeshGLSharedPtr mesh){
                                     // std::make_pair("position_out", "position_gtex"),
                                     std::make_pair("normal_out", "normal_gtex"),
                                     std::make_pair("diffuse_out", "diffuse_gtex"),
-                                    std::make_pair("metalness_and_roughness_out", "metalness_and_roughness_gtex"),
+                                    std::make_pair("metalness_and_roughness_and_sss_strength_out", "metalness_and_roughness_and_sss_strength_gtex"),
                                     // std::make_pair("specular_out", "specular_gtex"),
                                     // std::make_pair("shininess_out", "shininess_gtex")
                                     }
@@ -1960,6 +1994,127 @@ void Viewer::ssao_pass(gl::GBuffer& gbuffer, std::shared_ptr<Camera> camera){
 
 }
 
+void Viewer::subsurface_scattering_pass(){
+    //references
+    //1) https://therealmjp.github.io/posts/sss-intro/ 
+        //great explanation of various techniques 
+    //2) http://www.iryoku.com/sssss/
+        //has code as hlsl 
+    //3) http://iryoku.com/separable-sss/
+        //has code also but the webpage says that the code is quite outdated
+    //4) https://advances.realtimerendering.com/s2018/Efficient%20screen%20space%20subsurface%20scattering%20Siggraph%202018.pdf 
+        //Evgenii Golubev presentation, explains part of the normalized diffusion model 
+    //5) https://hanetakachou.github.io/Image-Synthesis/Lighting/Subsurface-Scattering.html
+        //great explanation of the approaches and the math
+    //6) https://developer.nvidia.com/gpugems/gpugems3/part-iii-rendering/chapter-14-advanced-techniques-realistic-real-time-skin
+        //nvidia texture space diffusion
+    //7) http://shihchinw.github.io/2015/12/realistic-human-skin-with-normalized-diffusion-ggx.html
+        //normalized diffusion with ggx
+    //8) https://zero-radiance.github.io/post/sampling-diffusion/
+        //Normalized diffusion can be samples in closed form
+    //CODE-----------------------------
+    //9) https://github.com/HanetakaChou/Subsurface-Scattering-Disney/blob/master/Shaders/subsurface_scattering_disney_blur.hlsli 
+        //great code of the disney sss, uses the closed-form sampling of the normalized diffusion
+    //10) https://github.com/LitpoEric/UnityCharacterRender_SeparableSubsurfaceScatter 
+        //code for separable-sss but only forward render
+    //11) https://github.com/Vulpinii/skin-texture/blob/master/assets/shaders/fragment_shader.glsl
+        //fast translucency from frostbite engine
+    //12) https://github.com/luxuia/separable-sss-unity
+        //unity code 
+    //13) https://github.com/DoerriesT/Separable-Subsurface-Scattering-Demo/blob/master/SubsurfaceScattering/resources/shaders/sssBlur_comp.comp 
+        //vulkan code for separable-sss
+    //14) https://github.com/shihchinw/rlShaders/tree/master/src
+        // great normalized diffusion and website but code is super tricky to understand
+
+
+    //we use normalized diffusion
+
+
+    // Eigen::Matrix4f P = m_camera->proj_matrix(m_gbuffer.width(), m_gbuffer.height());
+
+
+    //dont perform depth checking nor write into the depth buffer
+    glDepthMask(false);
+    glDisable(GL_DEPTH_TEST);
+
+    // Set attributes that the vao will pulll from buffers
+    GL_C( m_fullscreen_quad->vao.vertex_attribute(m_blur_shader, "position", m_fullscreen_quad->V_buf, 3) );
+    GL_C( m_fullscreen_quad->vao.vertex_attribute(m_blur_shader, "uv", m_fullscreen_quad->UV_buf, 2) );
+    m_fullscreen_quad->vao.indices(m_fullscreen_quad->F_buf); //Says the indices with we refer to vertices, this gives us the triangles
+
+    //shader setup
+    gl::Shader& shader=m_subsurface_scattering_shader;
+    GL_C( shader.use() );
+
+
+    //img we want to blur
+    gl::Texture2D& img=m_composed_fbo.tex_with_name("composed_diffuse_gtex");
+    //create temporary texture where we store the blurred results
+    Eigen::Vector2i sss_tmp_size;
+    sss_tmp_size << img.width(), img.height();
+    m_sss_tmp_tex.allocate_or_resize( img.internal_format(), img.format(), img.type(), sss_tmp_size.x(), sss_tmp_size.y() );
+    m_sss_tmp_tex.clear(); //clear also the mip maps
+
+    
+    //perform blur horizontal
+    glViewport(0.0f , 0.0f, img.width(), img.height() );
+    // shader.uniform_4x4(P, "currProj");
+    shader.uniform_bool(true, "horizontal"); //first we do horizontal blur and then vertical
+    shader.uniform_float(m_sss_width,"sss_width");
+    // shader.uniform_float(m_camera->fov_y(m_viewport_size.x(), m_viewport_size.y()), "fov_y");
+    shader.uniform_float(m_camera->m_fov, "fov_x");
+    // shader.uniform_float(m_camera->m_near, "cam_near");
+    // shader.uniform_float(m_camera->m_far, "cam_far");
+    shader.uniform_bool(m_camera->m_use_ortho_projection, "is_ortho");
+    shader.uniform_float( m_camera->m_far / (m_camera->m_far - m_camera->m_near), "projection_a"); // according to the formula at the bottom of article https://mynameismjp.wordpress.com/2010/09/05/position-from-depth-3/
+    shader.uniform_float( (-m_camera->m_far * m_camera->m_near) / (m_camera->m_far - m_camera->m_near) , "projection_b");
+    shader.bind_texture(m_composed_fbo.tex_with_name("composed_diffuse_gtex"),"composed_diffuse_gtex");
+    shader.bind_texture(m_gbuffer.tex_with_name("metalness_and_roughness_and_sss_strength_gtex"),"metalness_and_roughness_and_sss_strength_tex");
+    // shader.bind_texture(m_gbuffer.tex_with_name("ao_and_needs_sss_gtex"), "ao_and_needs_sss_gtex");
+    shader.bind_texture(m_gbuffer.tex_with_name("depth_gtex"), "depth_tex");
+    shader.draw_into(m_sss_tmp_tex, "blurred_output");
+    // draw
+    m_fullscreen_quad->vao.bind();
+    glDrawElements(GL_TRIANGLES, m_fullscreen_quad->m_core->F.size(), GL_UNSIGNED_INT, 0);
+
+
+    //verticla blur
+    glViewport(0.0f , 0.0f, img.width(), img.height() );
+    shader.uniform_bool(false, "horizontal"); //first we do horizontal blur and then vertical
+    shader.uniform_float(m_sss_width,"sss_width");
+    // shader.uniform_float(m_camera->fov_y(m_viewport_size.x(), m_viewport_size.y()), "fov_y");
+    shader.uniform_float(m_camera->m_fov, "fov_x");
+    // shader.uniform_float(m_camera->m_near, "cam_near");
+    // shader.uniform_float(m_camera->m_far, "cam_far");
+    shader.uniform_bool(m_camera->m_use_ortho_projection, "is_ortho");
+    shader.uniform_float( m_camera->m_far / (m_camera->m_far - m_camera->m_near), "projection_a"); // according to the formula at the bottom of article https://mynameismjp.wordpress.com/2010/09/05/position-from-depth-3/
+    shader.uniform_float( (-m_camera->m_far * m_camera->m_near) / (m_camera->m_far - m_camera->m_near) , "projection_b");
+    shader.bind_texture(m_sss_tmp_tex,"composed_diffuse_gtex");
+    shader.bind_texture(m_gbuffer.tex_with_name("metalness_and_roughness_and_sss_strength_gtex"),"metalness_and_roughness_and_sss_strength_tex");
+    shader.bind_texture(m_gbuffer.tex_with_name("depth_gtex"), "depth_tex");
+    shader.draw_into(img, "blurred_output");
+    // draw
+    m_fullscreen_quad->vao.bind();
+    glDrawElements(GL_TRIANGLES, m_fullscreen_quad->m_core->F.size(), GL_UNSIGNED_INT, 0);
+
+
+
+
+    //copy from blurred image to the original image
+    // img.copy_from_tex(m_sss_tmp_tex);
+            
+
+
+    //restore the state
+    glDepthMask(true);
+    glEnable(GL_DEPTH_TEST);
+    glViewport(0.0f , 0.0f, m_viewport_size.x()/m_subsample_factor, m_viewport_size.y()/m_subsample_factor );
+
+
+
+
+}
+
 void Viewer::compose_final_image(const GLuint fbo_id){
 
     // TIME_START("compose");
@@ -2008,7 +2163,7 @@ void Viewer::compose_final_image(const GLuint fbo_id){
     GL_C( m_compose_final_quad_shader.use() );
     m_compose_final_quad_shader.bind_texture(m_gbuffer.tex_with_name("normal_gtex"),"normal_tex");
     m_compose_final_quad_shader.bind_texture(m_gbuffer.tex_with_name("diffuse_gtex"),"diffuse_tex");
-    m_compose_final_quad_shader.bind_texture(m_gbuffer.tex_with_name("metalness_and_roughness_gtex"),"metalness_and_roughness_tex");
+    m_compose_final_quad_shader.bind_texture(m_gbuffer.tex_with_name("metalness_and_roughness_and_sss_strength_gtex"),"metalness_and_roughness_and_sss_strength_tex");
     m_compose_final_quad_shader.bind_texture(m_gbuffer.tex_with_name("depth_gtex"), "depth_tex");
     if (m_show_background_img){
         m_compose_final_quad_shader.bind_texture(m_background_tex, "background_tex");
@@ -2361,7 +2516,7 @@ void Viewer::apply_postprocess(){
     m_apply_postprocess_shader.bind_texture(m_gbuffer.tex_with_name("depth_gtex"), "depth_tex");
     m_apply_postprocess_shader.bind_texture(m_gbuffer.tex_with_name("normal_gtex"),"normal_tex");
     m_apply_postprocess_shader.bind_texture(m_gbuffer.tex_with_name("diffuse_gtex"),"diffuse_tex");
-    m_apply_postprocess_shader.bind_texture(m_gbuffer.tex_with_name("metalness_and_roughness_gtex"),"metalness_and_roughness_tex");
+    m_apply_postprocess_shader.bind_texture(m_gbuffer.tex_with_name("metalness_and_roughness_and_sss_strength_gtex"),"metalness_and_roughness_and_sss_strength_tex");
     if(m_ao_blurred_tex.storage_initialized()){
         m_apply_postprocess_shader.bind_texture(m_ao_blurred_tex,"ao_tex");
     }
@@ -2955,7 +3110,7 @@ void Viewer::write_gbuffer_to_folder(){
     gl::GBuffer debug_gbuffer;
     GL_C( debug_gbuffer.set_size(m_gbuffer.width(), m_gbuffer.height() ) ); //established what will be the size of the textures attached to this framebuffer
     GL_C( debug_gbuffer.add_texture("normals_debug_gtex", GL_RGB32F, GL_RGB, GL_FLOAT) );
-    GL_C( debug_gbuffer.add_texture("metalness_and_roughness_debug_gtex", GL_RGB32F, GL_RGB, GL_FLOAT) ); //metalness and roughness are stored as a RG but Opencv Cannot write rg so we make a rgb texture
+    GL_C( debug_gbuffer.add_texture("metalness_and_roughness_and_sss_strength_debug_gtex", GL_RGB32F, GL_RGB, GL_FLOAT) ); //metalness and roughness are stored as a RG but Opencv Cannot write rg so we make a rgb texture
     GL_C( debug_gbuffer.add_texture("depth_debug_gtex", GL_R32F, GL_RED, GL_FLOAT) ); //the depth is stored as depth_component which cannot be easily convertible to opencv so we record it here as R32F
     debug_gbuffer.sanity_check();
 
@@ -2975,13 +3130,13 @@ void Viewer::write_gbuffer_to_folder(){
     //shader setup
     GL_C( shader.use() );
     shader.bind_texture(m_gbuffer.tex_with_name("normal_gtex"), "normals_encoded_tex");
-    shader.bind_texture(m_gbuffer.tex_with_name("metalness_and_roughness_gtex"), "metalness_and_roughness_tex");
+    shader.bind_texture(m_gbuffer.tex_with_name("metalness_and_roughness_and_sss_strength_gtex"), "metalness_and_roughness_and_sss_strength_tex");
     shader.bind_texture(m_gbuffer.tex_with_name("depth_gtex"), "depth_tex");
     debug_gbuffer.bind_for_draw();
     shader.draw_into(debug_gbuffer,
                     {
                     std::make_pair("normal_out", "normals_debug_gtex"),
-                    std::make_pair("metalness_and_roughness_out", "metalness_and_roughness_debug_gtex"),
+                    std::make_pair("metalness_and_roughness_and_sss_strength_out", "metalness_and_roughness_and_sss_strength_debug_gtex"),
                     std::make_pair("depth_out", "depth_debug_gtex"),
                     }
                     ); //makes the shaders draw into the buffers we defines in the gbuffer

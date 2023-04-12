@@ -122,6 +122,10 @@ public:
     int m_brdf_lut_resolution;
     float m_surfel_blend_factor;
     float m_surfel_blend_scale;
+
+    //subsurface scattering
+    float m_sss_width;
+
     //params for multi-channel view
     bool m_enable_multichannel_view;
     float m_multichannel_interline_separation; //separation between the lines of different channels. Is a percentage of the screen's width
@@ -203,6 +207,7 @@ public:
 
     //rendering passes
     void ssao_pass(gl::GBuffer& gbuffer, std::shared_ptr<Camera> camera);
+    void subsurface_scattering_pass();
     void compose_final_image(const GLuint fbo_id);
     cv::Mat gbuffer_mat_with_name(const std::string name);
 
@@ -256,7 +261,8 @@ public:
     gl::Shader m_blur_shader;
     gl::Shader m_apply_postprocess_shader;
     gl::Shader m_decode_gbuffer_debugging;
-    gl::Shader m_blend_bg_shader;;
+    gl::Shader m_blend_bg_shader;
+    gl::Shader m_subsurface_scattering_shader;
 
     gl::GBuffer m_gbuffer; //contains all the textures of a normal gbuffer. So normals, diffuse, depth etc.
     gl::GBuffer m_composed_fbo; //contains the composed image between the foreground and background before tonemapping and gamma correction. Contains also the bright spots of the image
@@ -278,6 +284,7 @@ public:
     gl::CubeMap m_prefilter_cubemap_tex; //stores filtered maps for various roughness. Used for specular IBL
     gl::Texture2D m_brdf_lut_tex;
     gl::Texture2D m_uv_checker_tex;
+    gl::Texture2D m_sss_tmp_tex; //temporary for subsurface_scattering
     Eigen::MatrixXf m_random_samples;
     std::shared_ptr<MeshGL> m_fullscreen_quad; //we store it here because we precompute it and then we use for composing the final image after the deffered geom pass
 

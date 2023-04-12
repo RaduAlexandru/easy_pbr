@@ -19,7 +19,7 @@ layout(location = 1) out vec4 diffuse_out;
 // layout(location = 3) out vec4 specular_out;
 // layout(location = 4) out vec4 shininess_out;
 layout(location = 2) out vec3 normal_out;
-layout(location = 3) out vec2 metalness_and_roughness_out;
+layout(location = 3) out vec3 metalness_and_roughness_and_sss_strength_out;
 
 // //uniform
 uniform int color_type;
@@ -151,7 +151,7 @@ void main(){
 
         diffuse_out = vec4(color_per_vertex_in*surface_confidence, surface_confidence );
         normal_out = encode_normal( normal_in );
-        metalness_and_roughness_out=vec2(metalness_out, roughness_out)*surface_confidence;
+        metalness_and_roughness_and_sss_strength_out=vec3(metalness_out, roughness_out, 0.0)*surface_confidence;
         // normal_out = vec4(  encode_normal( normal_eye_in*surface_confidence ), 1.0, 1.0);
         // position_out = vec4(position_eye_in*surface_confidence, 1.0);
     }

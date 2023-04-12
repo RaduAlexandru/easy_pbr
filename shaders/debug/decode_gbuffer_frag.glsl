@@ -7,7 +7,7 @@ layout(location=1) in vec2 uv_in;
 
 //out
 layout(location = 0) out vec3 normal_out;
-layout(location = 1) out vec3 metalness_and_roughness_out;
+layout(location = 1) out vec3 metalness_and_roughness_and_sss_strength_out;
 layout(location = 2) out float depth_out;
 
 uniform sampler2D normals_encoded_tex;
@@ -39,11 +39,11 @@ void main(){
     vec3 normal_encoded=texture(normals_encoded_tex, uv_in).xyz;
     vec3 normal_decoded=decode_normal(normal_encoded);
     normal_decoded= (normal_decoded+1.0)*0.5;
-    vec2 metalnes_and_roughness=texture(metalness_and_roughness_tex, uv_in).xy;
+    vec3 metalnes_and_roughness_and_sss_strength=texture(metalness_and_roughness_tex, uv_in).xyz;
     float depth = texture(depth_tex, uv_in).x;
 
     normal_out = normal_decoded;
-    metalness_and_roughness_out = vec3(metalnes_and_roughness, 0.0);
+    metalness_and_roughness_and_sss_strength_out = metalnes_and_roughness_and_sss_strength;
     depth_out = depth;
 
     //debug just put ones

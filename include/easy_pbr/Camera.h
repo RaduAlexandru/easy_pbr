@@ -50,6 +50,7 @@ public:
     Eigen::Vector3f up(); //the assumed up vector onto which the camera is aligned. Normally it's (0,1,0)
     Eigen::Matrix3f cam_axes(); //returns in the columns of a 3x3 matrix the 3 axes that form the camera coordinate system (the right, up and backward vectors). We store the backward vector instead of the forward one because we assume a right-handed system so the camera look down the negative z axis
     float dist_to_lookat(); //distance from the camera to the lookat point
+    float fov_y(const float viewport_width, const float viewport_height);
 
 
     //setters
@@ -94,7 +95,7 @@ public:
     void wheel_event();
 
     float m_exposure;
-    float m_fov; //fov in the x direction
+    float m_fov; //fov in the x direction, if you need fov_y, use the function m_cam->fov_y()
     float m_near;
     float m_far;
     float m_ortho_scale;

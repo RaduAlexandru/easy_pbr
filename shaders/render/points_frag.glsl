@@ -16,7 +16,7 @@ layout(location = 3) in vec2 uv_in;
 // layout(location = 0) out vec4 position_out;
 layout(location = 1) out vec4 diffuse_out;
 layout(location = 2) out vec3 normal_out;
-layout(location = 3) out vec2 metalness_and_roughness_out;
+layout(location = 3) out vec3 metalness_and_roughness_and_sss_strength_out;
 layout(location = 4) out float ao_out;
 
 // //uniform
@@ -123,7 +123,7 @@ void main(){
     }
 
     normal_out=encode_normal(normal_in);
-    metalness_and_roughness_out=vec2(metalness_out, roughness_out);
+    metalness_and_roughness_and_sss_strength_out=vec3(metalness_out, roughness_out, 0.0);
     ao_out=1.0;
 
 }

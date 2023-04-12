@@ -100,6 +100,11 @@ Eigen::Vector3f Camera::up(){
 float Camera::dist_to_lookat(){
     return (position()-lookat()).norm();
 }
+float Camera::fov_y(const float viewport_width, const float viewport_height){
+    float aspect=viewport_width/viewport_height;
+    float fov_y=m_fov/aspect;
+    return fov_y;
+}
 Eigen::Matrix3f Camera::cam_axes(){
     Eigen::Matrix3f cam_axes;
 

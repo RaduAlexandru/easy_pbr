@@ -416,6 +416,11 @@ void Gui::draw_main_menu(){
                     ImGui::Unindent(10.0f*m_hidpi_scaling );
                 }
             if( ImGui::Checkbox("Show mesh", &mesh->m_vis.m_show_mesh) ) {  mesh->m_is_shadowmap_dirty=true;  }
+                if(mesh->m_vis.m_show_mesh){
+                    ImGui::Indent(10.0f*m_hidpi_scaling);
+                    ImGui::Checkbox("Enable SSS", &mesh->m_vis.m_needs_sss);  ImGui::SameLine(); help_marker("Enable subsurface scattering for more realistic skin rendering");
+                    ImGui::Unindent(10.0f*m_hidpi_scaling );
+                }
             if( ImGui::Checkbox("Show normals", &mesh->m_vis.m_show_normals) ) {  mesh->m_is_shadowmap_dirty=true;  }
             if ( mesh->m_vis.m_show_normals ) { ImGui::SliderFloat("Normal_scale", &mesh->m_vis.m_normals_scale, -1.0f, 1.0f) ;  }
             if( ImGui::Checkbox("Show wireframe", &mesh->m_vis.m_show_wireframe)) {  mesh->m_is_shadowmap_dirty=true; }
@@ -774,6 +779,11 @@ void Gui::draw_main_menu(){
             }
         #endif
         ImGui::Checkbox("GetAOFromPrecomputation", &m_view->m_get_ao_from_precomputation);
+    }
+
+    ImGui::Separator();
+    if (ImGui::CollapsingHeader("SSS")) {
+        ImGui::SliderFloat("SSS Width", &m_view->m_sss_width, 0.0001, 1.0);
     }
 
 
@@ -1379,7 +1389,7 @@ void Gui::draw_main_menu(){
         show_gl_texture(m_view->m_gbuffer.tex_with_name("diffuse_gtex").tex_id(), "diffuse_gtex", true);
         show_gl_texture(m_view->m_gbuffer.tex_with_name("normal_gtex").tex_id(), "normal_gtex", true);
         show_gl_texture(m_view->m_gbuffer.tex_with_name("depth_gtex").tex_id(), "depth_gtex", true);
-        show_gl_texture(m_view->m_gbuffer.tex_with_name("metalness_and_roughness_gtex").tex_id(), "metalness_and_roughness_gtex", true);
+        show_gl_texture(m_view->m_gbuffer.tex_with_name("metalness_and_roughness_and_sss_strength_gtex").tex_id(), "metalness_and_roughness_and_sss_strength_gtex", true);
         show_gl_texture(m_view->m_gbuffer.tex_with_name("ao_gtex").tex_id(), "ao_gtex", true);
         if (m_view->m_render_uv_to_gbuffer){
             show_gl_texture(m_view->m_gbuffer.tex_with_name("uv_gtex").tex_id(), "uv_gtex", true);
@@ -1389,7 +1399,9 @@ void Gui::draw_main_menu(){
         show_gl_texture(m_view->m_ao_blurred_tex.tex_id(), "ao_blurred_tex", true);
         show_gl_texture(m_view->m_brdf_lut_tex.tex_id(), "brdf_lut_tex", true);
         // show_gl_texture(m_view->m_composed_tex.tex_id(), "composed_tex", true);
-        show_gl_texture(m_view->m_composed_fbo.tex_with_name("composed_gtex").tex_id(), "composed_gtex", true);
+        // show_gl_texture(m_view->m_composed_fbo.tex_with_name("composed_gtex").tex_id(), "composed_gtex", true);
+        show_gl_texture(m_view->m_composed_fbo.tex_with_name("composed_diffuse_gtex").tex_id(), "composed_diffuse_gtex", true);
+        show_gl_texture(m_view->m_composed_fbo.tex_with_name("composed_specular_gtex").tex_id(), "composed_specular_gtex", true);
         show_gl_texture(m_view->m_composed_fbo.tex_with_name("bloom_gtex").tex_id(), "bloom_gtex", true);
         // show_gl_texture(m_view->m_posprocessed_tex.tex_id(), "posprocessed_tex", true);
         show_gl_texture(m_view->m_blur_tmp_tex.tex_id(), "blur_tmp_tex", true);

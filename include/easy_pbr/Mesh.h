@@ -55,6 +55,9 @@ struct VisOptions{
 
     bool m_points_as_circle=false;
 
+    //when you render mesh, you can also enable subsurface scattering for better skin rendering
+    bool m_needs_sss=false;
+
 
     float m_point_size=4.0;
     float m_line_width=1.0; //specified the width of of both line rendering and the wireframe rendering

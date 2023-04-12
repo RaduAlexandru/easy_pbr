@@ -17,7 +17,7 @@ uniform sampler2D bloom_tex;
 uniform sampler2D depth_tex;
 uniform sampler2D normal_tex;
 uniform sampler2D diffuse_tex;
-uniform sampler2D metalness_and_roughness_tex;
+uniform sampler2D metalness_and_roughness_and_sss_strength_tex;
 uniform sampler2D ao_tex;
 
 uniform bool enable_bloom;
@@ -163,6 +163,7 @@ void main(){
         vec4 color_diffuse = texture(composed_diffuse_tex, uv_in);
         vec4 color_specular = texture(composed_specular_tex, uv_in);
         color=color_diffuse+color_specular;
+        // color=color_diffuse;
     }
 
     if (enable_bloom){ //add the bloom from all the blurred textures
@@ -296,7 +297,7 @@ void main(){
                     color_pure.xyz=color_with_weight.rgb/color_with_weight.w;
                 }
             }else if(nr_channel_wrapped==4){ //metalness and roughness
-                vec2 metalness_roughness=texture(metalness_and_roughness_tex, uv_in).xy;
+                vec2 metalness_roughness=texture(metalness_and_roughness_and_sss_strength_tex, uv_in).xy;
                 float weight = texture(diffuse_tex, uv_in).w;
                 if (weight!=0.0){ //normalize it in case we are doing some surfel splatting
                     metalness_roughness/=weight;

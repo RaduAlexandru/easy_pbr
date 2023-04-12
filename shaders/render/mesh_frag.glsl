@@ -21,7 +21,7 @@ layout(location = 0) out vec4 position_out;
 layout(location = 1) out vec4 diffuse_out;
 // layout(location = 3) out vec4 normal_out;
 layout(location = 3) out vec3 normal_out;
-layout(location = 4) out vec2 metalness_and_roughness_out;
+layout(location = 4) out vec3 metalness_and_roughness_and_sss_strength_out;
 layout(location = 5) out int mesh_id_out;
 layout(location = 6) out vec2 uv_out;
 layout(location = 7) out float ao_out;
@@ -46,6 +46,7 @@ uniform float metalness;
 uniform float roughness;
 uniform float opacity;
 uniform int mesh_id;
+uniform bool needs_sss;
 uniform bool using_fat_gbuffer;
 //ssao stuff
 uniform bool colors_are_precomputed_ao;
@@ -180,7 +181,7 @@ void main(){
         ao_out=ao;
     }
 
-    metalness_and_roughness_out=vec2(metalness_out, roughness_out);
+    metalness_and_roughness_and_sss_strength_out=vec3(metalness_out, roughness_out, needs_sss?1.0:0.0);
     // metalness_and_roughness_out=vec2(0.5, 0.5);
 
     // normal_out = vec4(normal_cam_coords_in, 1.0);
@@ -194,6 +195,12 @@ void main(){
     if(render_uv_to_gbuffer){
         uv_out=uv_in;
     }
+
+    // if(needs_sss){
+    //     needs_sss_out=1.0;
+    // }else{
+    //     needs_sss_out=0.0;
+    // }
 
     // position_out = vec4(position_cam_coords_in, 1.0);
 }

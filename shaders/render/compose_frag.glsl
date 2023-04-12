@@ -16,7 +16,7 @@ layout(location = 2) out vec4 bloom_color;
 uniform sampler2D normal_tex;
 // uniform sampler2D position_cam_coords_tex;
 uniform sampler2D diffuse_tex;
-uniform sampler2D metalness_and_roughness_tex;
+uniform sampler2D metalness_and_roughness_and_sss_strength_tex;
 uniform sampler2D log_depth_tex;
 uniform sampler2D ao_tex;
 uniform sampler2D ao_gtex;
@@ -682,8 +682,11 @@ void main(){
             vec3 P_w = vec3(V_inv*vec4(P_c,1.0));
             vec3 V = normalize( eye_pos -P_w ); //view vector that goes from position of the fragment towards the camera
             vec3 R = reflect(-V, N);
-            float metalness=texture(metalness_and_roughness_tex, uv_in).x;
-            float roughness=texture(metalness_and_roughness_tex, uv_in).y;
+            // float metalness=texture(metalness_and_roughness_and_sss_strength_tex, uv_in).x;
+            // float roughness=texture(metalness_and_roughness_and_sss_strength_tex, uv_in).y;
+            vec2 metal_and_rough=texture(metalness_and_roughness_and_sss_strength_tex, uv_in).xy;
+            float metalness=metal_and_rough.x;
+            float roughness=metal_and_rough.y;
             if(color_with_weight.w!=0.0){
                 metalness/=color_with_weight.w;
                 roughness/=color_with_weight.w;
