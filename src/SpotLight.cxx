@@ -20,7 +20,8 @@ SpotLight::SpotLight(const configuru::Config& config):
     // m_near(0.01)
     // m_far(5000)
     m_power(0),
-    m_fullscreen_quad(MeshGL::create())
+    m_fullscreen_quad(MeshGL::create()),
+    m_is_shadowmap_dirty(true)
 {
     init_params(config);
 
@@ -258,5 +259,88 @@ gl::GBuffer& SpotLight::get_shadow_map_fbo_ref(){
 void SpotLight::print_ptr(){
     VLOG(1) << "Spotlight this is " << this;
 }
+
+
+
+
+//inherited movement function from camera. Whenever we move a light, it's shadow map is defined as dirty
+void SpotLight::set_model_matrix(const Eigen::Affine3f & delta){
+    Camera::set_model_matrix(delta);
+    m_is_shadowmap_dirty=true;
+}
+void SpotLight::set_lookat(const Eigen::Vector3f& lookat){
+    Camera::set_lookat(lookat);
+    m_is_shadowmap_dirty=true;
+}
+void SpotLight::set_position(const Eigen::Vector3f& pos){
+    Camera::set_position(pos);
+    m_is_shadowmap_dirty=true;
+} 
+void SpotLight::set_quat(const Eigen::Vector4f& quat){
+    Camera::set_quat(quat);
+    m_is_shadowmap_dirty=true;
+} 
+void SpotLight::set_up(const Eigen::Vector3f& up){
+    Camera::set_up(up);
+    m_is_shadowmap_dirty=true;
+}
+void SpotLight::set_dist_to_lookat(const float dist){
+    Camera::set_dist_to_lookat(dist);
+    m_is_shadowmap_dirty=true;
+} 
+void SpotLight::transform_model_matrix(const Eigen::Affine3f & delta){
+    Camera::transform_model_matrix(delta);
+    m_is_shadowmap_dirty=true;
+}
+void SpotLight::move_cam_and_lookat(const Eigen::Vector3f& pos){
+    Camera::move_cam_and_lookat(pos);
+    m_is_shadowmap_dirty=true;
+} 
+void SpotLight::dolly(const Eigen::Vector3f& dv){
+    Camera::dolly(dv);
+    m_is_shadowmap_dirty=true;
+} 
+void SpotLight::push_away(const float s){
+    Camera::push_away(s);
+    m_is_shadowmap_dirty=true;
+} 
+void SpotLight::push_away_by_dist(const float new_dist){
+    Camera::push_away_by_dist(new_dist);
+    m_is_shadowmap_dirty=true;
+} 
+void SpotLight::orbit(const Eigen::Quaternionf& q){
+    Camera::orbit(q);
+    m_is_shadowmap_dirty=true;
+} 
+void SpotLight::orbit_x(const float angle_degrees){
+    Camera::orbit_x(angle_degrees);
+    m_is_shadowmap_dirty=true;
+} 
+void SpotLight::orbit_y(const float angle_degrees){
+    Camera::orbit_y(angle_degrees);
+    m_is_shadowmap_dirty=true;
+}
+void SpotLight::orbit_z(const float angle_degrees){
+    Camera::orbit_z(angle_degrees);
+    m_is_shadowmap_dirty=true;
+} 
+void SpotLight::orbit_axis_angle(const Eigen::Vector3f& axis, const float angle_degrees){
+    Camera::orbit_axis_angle(axis,angle_degrees);
+    m_is_shadowmap_dirty=true;
+}
+void SpotLight::rotate(const Eigen::Quaternionf& q){
+    Camera::rotate(q);
+    m_is_shadowmap_dirty=true;
+} 
+void SpotLight::rotate_axis_angle(const Eigen::Vector3f& axis, const float angle_degrees){
+    Camera::rotate_axis_angle(axis, angle_degrees);
+    m_is_shadowmap_dirty=true;
+} 
+void SpotLight::from_frame(const Frame& frame){
+    Camera::from_frame(frame);
+    m_is_shadowmap_dirty=true;
+}
+
+
 
 } //namespace easy_pbr

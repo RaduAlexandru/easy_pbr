@@ -1026,7 +1026,7 @@ void Viewer::draw(const GLuint fbo_id){
     }
     //if the camera we are moving is actually one of the lights it means we need to update the shadowmap
     for (int i = 0; i < (int)m_spot_lights.size(); i++) {
-        if (m_camera==m_spot_lights[i]){
+        if (m_camera==m_spot_lights[i] || m_spot_lights[i]->m_is_shadowmap_dirty){
             need_shadow_map_update=true; 
         }
     }
@@ -1076,6 +1076,7 @@ void Viewer::draw(const GLuint fbo_id){
                     }
                     mesh->m_core->m_is_shadowmap_dirty=false;
                 }
+                m_spot_lights[l_idx]->m_is_shadowmap_dirty=false;
             }
         }
     }

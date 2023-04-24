@@ -468,8 +468,22 @@ PYBIND11_MODULE(easypbr, m) {
     py::class_<SpotLight, Camera, std::shared_ptr<SpotLight>  > (m, "SpotLight")
     // py::class_<SpotLight, Camera, std::shared_ptr<Camera> > (m, "SpotLight")
     // .def(py::init<const std::string>())
+    .def("set_position", &SpotLight::set_position )
+    .def("set_quat", &SpotLight::set_quat )
+    .def("set_lookat", &SpotLight::set_lookat )
+    .def("set_dist_to_lookat", &SpotLight::set_dist_to_lookat )
+    .def("push_away", &SpotLight::push_away )
+    .def("push_away_by_dist", &SpotLight::push_away_by_dist )
+    .def("orbit_x", &SpotLight::orbit_x )
+    .def("orbit_y", &SpotLight::orbit_y )
+    .def("orbit_z", &SpotLight::orbit_z )
+    .def("orbit_axis_angle", &SpotLight::orbit_axis_angle )
+    .def("rotate", &SpotLight::rotate )
+    .def("rotate_axis_angle", &SpotLight::rotate_axis_angle )
+    .def("from_frame", &SpotLight::from_frame )
     .def_readwrite("m_power", &SpotLight::m_power )
     .def_readwrite("m_color", &SpotLight::m_color )
+    .def_readwrite("m_is_shadowmap_dirty", &SpotLight::m_is_shadowmap_dirty )
     ;
 
     //Scene

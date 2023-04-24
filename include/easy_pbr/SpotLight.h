@@ -40,11 +40,36 @@ public:
     gl::Texture2D& get_shadow_map_ref();
     gl::GBuffer& get_shadow_map_fbo_ref();
 
+
+    //inherited movement function from camera. Whenever we move a light, it's shadow map is defined as dirty
+    void set_model_matrix(const Eigen::Affine3f & delta);
+    void set_lookat(const Eigen::Vector3f& lookat); //updates the orientation according to the up vector so that it points towards lookat
+    void set_position(const Eigen::Vector3f& pos); //updates the orientation according to the up vector so that it keeps pointing towards lookat
+    void set_quat(const Eigen::Vector4f& quat); //sets the quaternion of the model matrix (tf_world_cam)
+    void set_up(const Eigen::Vector3f& up);
+    void set_dist_to_lookat(const float dist); //sets the lookat at a certain distance along the negative z axis
+    void transform_model_matrix(const Eigen::Affine3f & delta);
+    void move_cam_and_lookat(const Eigen::Vector3f& pos); //moves the camera together with the lookat point
+    void dolly(const Eigen::Vector3f& dv); //moves the camera along a certain displacement vector dv expressed in world coordinates
+    void push_away(const float s); //moves the camera closer or further from the lookup point. A 's' values of 1 means no movement s>1 means going further and s<1 means closer
+    void push_away_by_dist(const float new_dist); //pueshes the camera backwards or forwards until the distance to lookat point matches the new_dist
+    void orbit(const Eigen::Quaternionf& q); //Orbit around the m_lookat by an amount specified by q
+    void orbit_x(const float angle_degrees); //orbit around the x axis of the world a certain amount of degrees
+    void orbit_y(const float angle_degrees); //orbit around the y axis of the world a certain amount of degrees
+    void orbit_z(const float angle_degrees); //orbit around the z axis of the world a certain amount of degrees
+    void orbit_axis_angle(const Eigen::Vector3f& axis, const float angle_degrees); //orbit around the chosen axis of the world a certain amount of degrees
+    void rotate(const Eigen::Quaternionf& q); //rotates around the central camera position by a quaternion q
+    void rotate_axis_angle(const Eigen::Vector3f& axis, const float angle_degrees); //same as rotate but using a axis_angle
+    void from_frame(const Frame& frame); // initialized the camera to have the parameters of the frame
+    
+
+
     void print_ptr();
 
     float m_power;
     Eigen::Vector3f m_color;
     bool m_create_shadow;
+    bool m_is_shadowmap_dirty; //whenever the light moves, the shadowmap is set as dirty
 
 private:
 
