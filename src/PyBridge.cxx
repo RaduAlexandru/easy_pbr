@@ -251,6 +251,17 @@ PYBIND11_MODULE(easypbr, m) {
     .def("bgr2bgra", [](cv::Mat &m) {   cv::Mat res; cv::cvtColor(m, res, cv::COLOR_BGR2BGRA); return res; } )
     .def("rgba2rgb", [](cv::Mat &m) {   cv::Mat res; cv::cvtColor(m, res, cv::COLOR_RGBA2RGB); return res; } )
     .def("bgra2bgr", [](cv::Mat &m) {   cv::Mat res; cv::cvtColor(m, res, cv::COLOR_BGRA2BGR); return res; } )
+    .def("get_channel", [](cv::Mat &m, const int idx) {  
+        std::vector<cv::Mat> channels(m.channels());
+        cv::split(m, channels);
+        CHECK((size_t)idx<channels.size()) << "Cannot retreive channel with idx: " << idx << " as the mat has only " << channels.size() << " channells"; 
+        return channels[idx];
+      } ).def("get_channel", [](cv::Mat &m, const int idx) {  
+        std::vector<cv::Mat> channels(m.channels());
+        cv::split(m, channels);
+        CHECK((size_t)idx<channels.size()) << "Cannot retreive channel with idx: " << idx << " as the mat has only " << channels.size() << " channells"; 
+        return channels[idx];
+      } )
     .def("normalize_range", [](cv::Mat &m) {   cv::Mat res;     cv::normalize(m, res, 0, 1, cv::NORM_MINMAX, CV_32F);     return res; } )
     // .def("rgba2rgbblack", [](cv::Mat &m ) {  m=cv::imread(path, cv::IMREAD_UNCHANGED);  } )
     .def("flip_y", [](cv::Mat &m) {  cv::Mat flipped; cv::flip(m, flipped, 0); m=flipped; return flipped;  } )
