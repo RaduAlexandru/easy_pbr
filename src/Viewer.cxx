@@ -401,7 +401,8 @@ bool Viewer::init_params_gl(const std::string config_file){
     int nr_spot_lights = lights_cfg.get_or("nr_spot_lights", default_lights_cfg);
     for(int i=0; i<nr_spot_lights; i++){
         Config light_cfg=lights_cfg.get_or("spot_light_"+std::to_string(i), default_lights_cfg);
-        std::shared_ptr<SpotLight> light=  Generic::SmartPtrBuilder::CreateSharedPtr< SpotLight, Camera >(new SpotLight(light_cfg));
+        Config default_light_cfg=default_lights_cfg["spot_light_"+std::to_string(i)];
+        std::shared_ptr<SpotLight> light=  Generic::SmartPtrBuilder::CreateSharedPtr< SpotLight, Camera >(new SpotLight(light_cfg, default_light_cfg));
         m_spot_lights.push_back(light);
     }
 
@@ -2239,6 +2240,11 @@ void Viewer::compose_final_image(const GLuint fbo_id){
         std::string uniform_power_name =  uniform_name +"["+std::to_string(i)+"]"+".power";
         GLint uniform_power_loc=m_compose_final_quad_shader.get_uniform_location(uniform_power_name);
         glUniform1f(uniform_power_loc, m_spot_lights[i]->m_power);
+
+        //penumbra_size
+        std::string uniform_penumbra_size_name =  uniform_name +"["+std::to_string(i)+"]"+".penumbra_size";
+        GLint uniform_penumbra_size_loc=m_compose_final_quad_shader.get_uniform_location(uniform_penumbra_size_name);
+        glUniform1f(uniform_penumbra_size_loc, m_spot_lights[i]->m_penumbra_size);
 
         //VP matrix that project world coordinates into the light
         std::string uniform_VP_name =  uniform_name +"["+std::to_string(i)+"]"+".VP";

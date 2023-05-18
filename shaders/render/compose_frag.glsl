@@ -74,6 +74,7 @@ struct SpotLight {
     vec3 pos;
     vec3 color; //the color of the light
     float power; // how much strenght does the light have
+    float penumbra_size;
     mat4 VP; //projects world coordinates into the light
     sampler2D shadow_map;
     bool create_shadow;
@@ -731,7 +732,8 @@ void main(){
                     
                     // shadow_factor+=shadow_map_pcf(i, proj_in_light);
                     // shadow_factor+=sample_vsm(spot_lights[i].shadow_map, proj_in_light);
-                    shadow_factor+=sample_vsm_pcf(spot_lights[i].shadow_map, proj_in_light, 0.005);
+                    // shadow_factor+=sample_vsm_pcf(spot_lights[i].shadow_map, proj_in_light, 0.005);
+                    shadow_factor+=sample_vsm_pcf(spot_lights[i].shadow_map, proj_in_light, spot_lights[i].penumbra_size);
 
                     //avg blocker
                     // float light_size_in_uv_space=0.0000002;

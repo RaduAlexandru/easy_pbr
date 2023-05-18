@@ -26,7 +26,7 @@ class SpotLight : public Camera, public Generic::EnableSharedFromThis< SpotLight
 {
 public:
     // EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    SpotLight(const configuru::Config& config);
+    SpotLight(const configuru::Config& config, const configuru::Config& default_config);
 
     // void render_to_shadow_map(const MeshCore& mesh);
     void set_power_for_point(const Eigen::Vector3f& point, const float power);
@@ -68,12 +68,13 @@ public:
 
     float m_power;
     Eigen::Vector3f m_color;
+    float m_penumbra_size;
     bool m_create_shadow;
     bool m_is_shadowmap_dirty; //whenever the light moves, the shadowmap is set as dirty
 
 private:
 
-    void init_params(const configuru::Config& config_file);
+    void init_params(const configuru::Config& config_file, const configuru::Config& default_config);
     void init_opengl();
     void blur_tex(gl::Texture2D& tex_in, gl::Texture2D& tex_out, gl::Texture2D&tex_tmp, const int nr_iters);
 

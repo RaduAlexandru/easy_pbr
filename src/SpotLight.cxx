@@ -13,28 +13,30 @@
 
 namespace easy_pbr{
 
-SpotLight::SpotLight(const configuru::Config& config):
+SpotLight::SpotLight(const configuru::Config& config, const configuru::Config& default_config):
     // m_fov_x(90),
     // m_fov_y(90),
     // m_fov(90),
     // m_near(0.01)
     // m_far(5000)
     m_power(0),
+    m_penumbra_size(0.005),
     m_fullscreen_quad(MeshGL::create()),
     m_is_shadowmap_dirty(true)
 {
-    init_params(config);
+    init_params(config, default_config);
 
 
     init_opengl();
 }
 
-void SpotLight::init_params(const configuru::Config& config ){
+void SpotLight::init_params(const configuru::Config& config, const configuru::Config& default_config ){
 
     m_power=config.get_float_else_nan("power");
     m_color=config.get_eigenv3_else_nan("color");
     m_create_shadow=config["create_shadow"];
     m_shadow_map_resolution=config["shadow_map_resolution"];
+    m_penumbra_size=config.get_or("penumbra_size",default_config);
 
 }
 

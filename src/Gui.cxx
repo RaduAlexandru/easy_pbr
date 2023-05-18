@@ -1287,8 +1287,8 @@ void Gui::draw_main_menu(){
     if (ImGui::CollapsingHeader("Lights")) {
         ImGui::Checkbox("Enable LightFollow", &m_view->m_lights_follow_camera);
 
-        ImGui::SliderInt("BlockerSamples", &m_view->m_nr_pcss_blocker_samples, 2, 256) ;
-        ImGui::SliderInt("PCFSamples", &m_view->m_nr_pcss_pcf_samples, 2, 256) ;
+        ImGui::SliderInt("BlockerSamples", &m_view->m_nr_pcss_blocker_samples, 2, 255) ;
+        ImGui::SliderInt("PCFSamples", &m_view->m_nr_pcss_pcf_samples, 2, 255) ;
 
         if(ImGui::ListBoxHeader("Selected lights", m_view->m_spot_lights.size(), 6)){ //all the spot lights
 
@@ -1308,6 +1308,7 @@ void Gui::draw_main_menu(){
 
             //modify properties
             ImGui::SliderFloat("Power", &m_view->m_spot_lights[m_selected_spot_light_idx]->m_power, 100.0, 500.0);
+            ImGui::SliderFloat("Penumbra_size", &m_view->m_spot_lights[m_selected_spot_light_idx]->m_penumbra_size, 0.001, 0.02);
             ImGui::ColorEdit3("Color", m_view->m_spot_lights[m_selected_spot_light_idx]->m_color.data());
             //m_create_shadow
             ImGui::Checkbox("Create shadow", &m_view->m_spot_lights[m_selected_spot_light_idx]->m_create_shadow);
