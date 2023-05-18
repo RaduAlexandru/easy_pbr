@@ -318,6 +318,7 @@ public:
     // void rotate_y_axis(const float degrees);
     void align_to_cloud(const std::shared_ptr<Mesh>& cloud_target); //aligns the current cloud to a target
     void random_subsample(const float percentage_removal);
+    Eigen::MatrixXd random_points_on_mesh(const int n);
     void recalculate_normals(); //recalculates NF and NV
     void flip_normals();
     float normalize_size(); //normalize the size of the mesh between [0,1]

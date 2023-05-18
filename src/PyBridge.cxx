@@ -699,6 +699,7 @@ PYBIND11_MODULE(easypbr, m) {
     // .def("rotate_x_axis", &Mesh::rotate_x_axis )
     // .def("rotate_y_axis", &Mesh::rotate_y_axis )
     .def("random_subsample", &Mesh::random_subsample )
+    .def("random_points_on_mesh", &Mesh::random_points_on_mesh )
     .def("normalize_size", &Mesh::normalize_size )
     .def("normalize_position", &Mesh::normalize_position )
     // .def("move_in_x", &Mesh::move_in_x )

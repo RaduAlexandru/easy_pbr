@@ -26,6 +26,7 @@
 #include <igl/vertex_triangle_adjacency.h>
 #include <igl/remove_duplicate_vertices.h>
 #include <igl/connect_boundary_to_infinity.h>
+#include <igl/random_points_on_mesh.h>
 #include <igl/upsample.h>
 #include <igl/loop.h>
 #include <igl/point_mesh_squared_distance.h>
@@ -1506,6 +1507,18 @@ void Mesh::random_subsample(const float percentage_removal){
     m_is_dirty=true;
     m_is_shadowmap_dirty=true;
 
+}
+
+Eigen::MatrixXd Mesh::random_points_on_mesh(const int n){
+    // Eigen::MatrixXd B;
+    Eigen::SparseMatrix<double> B;
+    Eigen::MatrixXi FI;
+    Eigen::MatrixXd X;
+    igl::random_points_on_mesh(n,V,F,B,FI);
+
+    X=B*V;
+
+    return X;
 }
 
 
