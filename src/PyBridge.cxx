@@ -256,11 +256,6 @@ PYBIND11_MODULE(easypbr, m) {
         cv::split(m, channels);
         CHECK((size_t)idx<channels.size()) << "Cannot retreive channel with idx: " << idx << " as the mat has only " << channels.size() << " channells"; 
         return channels[idx];
-      } ).def("get_channel", [](cv::Mat &m, const int idx) {  
-        std::vector<cv::Mat> channels(m.channels());
-        cv::split(m, channels);
-        CHECK((size_t)idx<channels.size()) << "Cannot retreive channel with idx: " << idx << " as the mat has only " << channels.size() << " channells"; 
-        return channels[idx];
       } )
     .def("normalize_range", [](cv::Mat &m) {   cv::Mat res;     cv::normalize(m, res, 0, 1, cv::NORM_MINMAX, CV_32F);     return res; } )
     // .def("rgba2rgbblack", [](cv::Mat &m ) {  m=cv::imread(path, cv::IMREAD_UNCHANGED);  } )
@@ -398,6 +393,7 @@ PYBIND11_MODULE(easypbr, m) {
     .def_readwrite("m_kernel_radius", &Viewer::m_kernel_radius )
     .def_readwrite("m_enable_culling", &Viewer::m_enable_culling )
     .def_readwrite("m_enable_edl_lighting", &Viewer::m_enable_edl_lighting )
+    .def_readwrite("m_edl_strength", &Viewer::m_edl_strength )
     .def_readwrite("m_enable_ssao", &Viewer::m_enable_ssao )
     .def_readwrite("m_ambient_color_power", &Viewer::m_ambient_color_power )
     .def_readwrite("m_ao_power", &Viewer::m_ao_power )
