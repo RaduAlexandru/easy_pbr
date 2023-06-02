@@ -17,7 +17,7 @@
 #include "ImGuizmo.h"
 
 //opencv
-#include "opencv2/opencv.hpp"
+#include <opencv2/core/mat.hpp>
 
 //eigen
 #include <Eigen/Core>

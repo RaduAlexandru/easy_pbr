@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <unordered_map> //for deduplicating obj vertices
 
+#include "opencv2/imgproc/imgproc.hpp" //for cv::resize
+
 //my stuff
 // #include "MiscUtils.h"
 #include "easy_pbr/LabelMngr.h"

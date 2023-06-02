@@ -8,7 +8,7 @@
 #include <configuru.hpp>
 
 //OpenCV
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/mat.hpp>
 
 //Eigen
 #include <Eigen/Core>

@@ -287,6 +287,8 @@ public:
     gl::Texture2D m_sss_tmp_tex; //temporary for subsurface_scattering
     Eigen::MatrixXf m_random_samples;
     std::shared_ptr<MeshGL> m_fullscreen_quad; //we store it here because we precompute it and then we use for composing the final image after the deffered geom pass
+    //for TAA
+    // gl::Texture2D m_prev_tex;
 
     //for trajectory following
     std::vector<std::shared_ptr<Camera>> m_trajectory;

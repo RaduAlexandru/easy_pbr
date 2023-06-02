@@ -1,7 +1,8 @@
 #pragma once
 
 #include <Eigen/Geometry>
-#include <opencv2/highgui/highgui.hpp>
+// #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/mat.hpp>
 
 #include "easy_pbr/Mesh.h"
 

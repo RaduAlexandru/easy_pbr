@@ -4,6 +4,8 @@
 #include<stdarg.h>
 #include <any>
 #include <stdexcept>
+#include <iostream>
+#include <map>
 
 
 
@@ -11,7 +13,7 @@
 #include <Eigen/Geometry>
 
 //opencv for textre
-#include "opencv2/opencv.hpp"
+#include <opencv2/core/mat.hpp>
 
 //better enums
 #include <enum.h>

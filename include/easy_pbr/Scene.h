@@ -1,6 +1,6 @@
 #pragma once
 
-#include "easy_pbr/Mesh.h"
+#include <Eigen/Core>
 
 #include <vector>
 #include <memory>

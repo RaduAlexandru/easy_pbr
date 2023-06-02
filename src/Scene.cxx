@@ -1,5 +1,7 @@
 #include "easy_pbr/Scene.h"
 
+#include "easy_pbr/Mesh.h"
+
 //c++
 
 //my stuff
