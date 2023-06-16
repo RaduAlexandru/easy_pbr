@@ -554,7 +554,7 @@ float find_blocker_distance(out int nr_blockers,vec3 shadowCoords, sampler2D sha
 	if (nr_blockers > 0){
 		return avgBlockerDistance / nr_blockers;
     }else{
-		return -1;
+		return -1.0f;
     }
 }
 
