@@ -94,7 +94,7 @@ void EasyPBRwrapper::compile_shaders(){
 
 void EasyPBRwrapper::init_opengl(){
     //create a fullscreen quad which we will use for rendering full screen images
-    m_fullscreen_quad->m_core->create_full_screen_quad();
+    m_fullscreen_quad->m_core->create_quad();
     m_fullscreen_quad->upload_to_gpu();
 
 }
