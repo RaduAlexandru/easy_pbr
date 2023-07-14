@@ -54,7 +54,30 @@ option(LIBIGL_WITH_XML               "Use XML"            OFF)
 ######   PACKAGES   ############################################################
 find_package(GLFW REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread filesystem)
-find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+#find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+
+# clang-specific compile flags
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+  #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-exceptions -fcolor-diagnostics -frelaxed-template-template-args -Wno-error=deprecated-declarations")
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 10)
+    # These are disabled to avoid lot's of warnings in Eigen code with clang 10
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-misleading-indentation")
+  endif()
+endif()
+
+if(NOT EIGEN_ROOT)
+  set(EIGEN_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/deps/eigen")
+endif()
+
+set(EIGEN_INCLUDE_DIR_HINTS ${EIGEN_ROOT})
+find_package(Eigen3 3.4.90 EXACT REQUIRED MODULE)
+message(STATUS "Found Eigen headers in: ${EIGEN3_INCLUDE_DIR}")
+if(NOT EIGEN3_INCLUDE_DIR MATCHES "^${EIGEN_ROOT}")
+  message(WARNING "Found Eigen headers are outside of specified EIGEN_ROOT '${EIGEN_ROOT}'")
+endif()
+
+
+
 find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui imgcodecs )
 find_package(LIBIGL REQUIRED)
 if(EASYPBR_WITH_PCL)
