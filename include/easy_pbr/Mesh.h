@@ -288,6 +288,7 @@ public:
     void color_from_label_indices(Eigen::MatrixXi label_indices);
     void color_from_mat(const cv::Mat& mat); //sample the mat using the UVS and store the pixel values into C
     void compute_embree_ao(const int nr_samples);
+    std::vector<bool> compute_vertex_visibility_towards_point(const Eigen::Vector3f& point,const float bias); //checks if the vertices of the mesh are visible from a point in the world by ray tracing segments
     Eigen::Vector3d centroid();
     void sanity_check() const; //check that all the data inside the mesh is valid, there are enough normals for each face, faces don't idx invalid points etc.
     //create certain meshes

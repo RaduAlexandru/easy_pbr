@@ -35,6 +35,7 @@
 #ifdef EASYPBR_WITH_EMBREE
     #include <igl/embree/EmbreeIntersector.h>
     #include <igl/embree/ambient_occlusion.h>
+    #include <igl/Hit.h>
 #endif
 
 #define TINYOBJLOADER_IMPLEMENTATION // define this in only *one* .cc
@@ -2306,6 +2307,32 @@ void Mesh::color_from_mat(const cv::Mat& mat){
 
         m_colors_are_precomputed_ao=true;
         m_is_dirty=true;
+
+    }
+    std::vector<bool> Mesh::compute_vertex_visibility_towards_point(const Eigen::Vector3f& point, const float bias){
+        std::vector<bool> is_visible(V.rows(), false);
+
+        this->apply_model_matrix_to_cpu(true); // We need this because we may have modified the model matrix which modifiest eh normals and they need to be consistent with the rest of the scene
+
+        igl::embree::EmbreeIntersector ei;
+        ei.init(V.cast<float>(),F.cast<int>());
+
+        Eigen::Vector3f cam_center=point;
+
+        for(int i=0; i<V.rows(); i++){
+            igl::Hit hit;
+            Eigen::Vector3f point=V.row(i).cast<float>();
+
+            //bias the point a bit towards the camera
+            Eigen::Vector3f dir=cam_center-point;
+            dir.normalize();
+            point+=dir*bias;
+
+            bool was_hit=ei.intersectSegment(point, cam_center, hit);
+            is_visible[i]=was_hit;
+        }
+
+        return is_visible;
 
     }
 #endif

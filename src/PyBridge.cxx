@@ -687,6 +687,7 @@ PYBIND11_MODULE(easypbr, m) {
     .def("compute_distance_to_mesh", &Mesh::compute_distance_to_mesh )
     #ifdef EASYPBR_WITH_EMBREE
         .def("compute_embree_ao", &Mesh::compute_embree_ao )
+        .def("compute_vertex_visibility_towards_point", &Mesh::compute_vertex_visibility_towards_point )
     #endif
     .def("fix_oversplit_due_to_blender_uv", &Mesh::fix_oversplit_due_to_blender_uv )
 
