@@ -171,6 +171,7 @@ public:
 
     bool init_params_nongl(const std::string config_file);
     bool init_params_gl(const std::string config_file);
+    void reset_all_params();
     bool init_context();
     void setup_callbacks_viewer(GLFWwindow* window);
     void setup_callbacks_imgui(GLFWwindow* window);

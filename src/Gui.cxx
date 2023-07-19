@@ -283,6 +283,7 @@ void Gui::draw_main_menu(){
         ImGui::SameLine();
         if ( ImGui::Button("Show all") ){
             Scene::show_all();
+
         }
         ImGui::SameLine();
         if ( ImGui::Button("Clone") ){
@@ -304,6 +305,14 @@ void Gui::draw_main_menu(){
             }
 
         }
+        ImGui::SameLine();
+        if ( ImGui::Button("Reset") ){
+            //remove all meshes from the scene
+            Scene::clear();
+            m_view->m_meshes_gl.clear();
+            m_view->reset_all_params();
+        }
+
         if(ImGui::ListBoxHeader("Scene meshes", Scene::nr_meshes(), 6)){
             for (int i = 0; i < Scene::nr_meshes(); ++i) {
                 MeshSharedPtr mesh=m_view->m_scene->get_mesh_with_idx(i);

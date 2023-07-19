@@ -828,6 +828,38 @@ void Viewer::configure_camera(){
     }
 }
 
+void Viewer::reset_all_params(){
+    //resets all aprams to nan or whatever is needed so that at the next iteration of adding a mesh they will be set again to somethign reasonable for the next mesh
+
+    m_first_draw=true;
+
+    //sao
+    m_kernel_radius=std::numeric_limits<float>::signaling_NaN();
+    m_sss_width=std::numeric_limits<float>::signaling_NaN();
+
+    //lights
+    for(int i=0; i<m_spot_lights.size(); i++){
+        std::shared_ptr<SpotLight> light = m_spot_lights[0];
+        light->m_lookat_initialized=false;
+        light->m_position_initialized=false;
+        light->m_power=std::numeric_limits<float>::signaling_NaN();
+        light->m_is_shadowmap_dirty=true;
+    }
+
+    //camera
+    m_camera->m_is_initialized=false;
+    m_camera->m_lookat_initialized=false;
+    m_camera->m_position_initialized=false;
+    m_camera->m_fov=std::numeric_limits<float>::signaling_NaN();
+    m_camera->m_near=std::numeric_limits<float>::signaling_NaN();
+    m_camera->m_far=std::numeric_limits<float>::signaling_NaN();
+    m_camera->m_exposure=std::numeric_limits<float>::signaling_NaN();
+
+
+
+
+}
+
 void Viewer::add_callback_pre_draw(const std::function<void(Viewer& viewer)> func){
     m_callbacks_pre_draw.push_back(func);
 }
