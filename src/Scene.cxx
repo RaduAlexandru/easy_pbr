@@ -245,9 +245,10 @@ void Scene::remove_meshes_starting_with_name(const std::string name_prefix){
 
 Eigen::Vector3f Scene::get_centroid(const bool use_mutex){
 
-    if(use_mutex){
-        std::lock_guard<std::mutex> lock(m_mesh_mutex);  // so that accesed to the map are thread safe
-    }
+    std::unique_lock<std::mutex> lock = use_mutex ? std::unique_lock<std::mutex>(m_mesh_mutex) : std::unique_lock<std::mutex>();
+//    if(use_mutex){
+//        std::lock_guard<std::mutex> lock(m_mesh_mutex);  // so that accesed to the map are thread safe
+//    }
 
     //if the scene is empty just return the 0.0.0
     if(is_empty(false)){ //don't use mutex because we either locked in the the previous line or whoever called this function ensured us that the lock is already locked
@@ -277,9 +278,10 @@ Eigen::Vector3f Scene::get_centroid(const bool use_mutex){
 
 float Scene::get_scale(const bool use_mutex){
 
-    if(use_mutex){
-        std::lock_guard<std::mutex> lock(m_mesh_mutex);  // so that accesed to the map are thread safe
-    }
+    std::unique_lock<std::mutex> lock = use_mutex ? std::unique_lock<std::mutex>(m_mesh_mutex) : std::unique_lock<std::mutex>();
+//    if(use_mutex){
+//        std::lock_guard<std::mutex> lock(m_mesh_mutex);  // so that accesed to the map are thread safe
+//    }
 
     //if the scene is empty just return the scale 1.0
     if(is_empty(false)){ //don't use mutex because we either locked in the the previous line or whoever called this function ensured us that the lock is already locked
@@ -326,9 +328,11 @@ float Scene::get_scale(const bool use_mutex){
 
 bool Scene::is_empty(const bool use_mutex){
 
-    if(use_mutex){
-        std::lock_guard<std::mutex> lock(m_mesh_mutex);  // so that accesed to the map are thread safe
-    }
+    std::unique_lock<std::mutex> lock = use_mutex ? std::unique_lock<std::mutex>(m_mesh_mutex) : std::unique_lock<std::mutex>();
+
+//    if(use_mutex){
+//        std::lock_guard<std::mutex> lock(m_mesh_mutex);  // so that accesed to the map are thread safe << this was destroyed in the brackets and thus not thread-safe!
+//    }
     //return true when all of the meshes have no vertices`
     for(size_t i=0; i<m_meshes.size(); i++){
         if(!m_meshes[i]->is_empty()){
